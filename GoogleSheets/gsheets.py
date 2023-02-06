@@ -39,4 +39,3 @@ def get_last_row():
         get('values', [])
     last_row_id = len(rows)
     return last_row_id
-

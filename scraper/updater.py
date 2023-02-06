@@ -399,5 +399,5 @@ def run_links_updater():
         except Exception as exc:
             print(exc)
 
-    # загрузка товаров из json в таблице
+    # загрузка товаров из json в таблицу
     upload_data_to_sheets()
