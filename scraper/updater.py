@@ -4,9 +4,10 @@ from _init_ import BASE_DIR
 from scraper.scraper_main import create_driver, get_htmlsoup, get_data
 from GoogleSheets.gsheets import read_column, write_column, get_last_row
 
+HOST = "https://www.mobile.de"
+
 
 def get_product_links_from_page(url):
-    HOST = "https://www.mobile.de"
     soup = get_htmlsoup(url, create_driver())
 
     # поиск и запись в массив всех ссылок на товары со страницы
@@ -342,7 +343,7 @@ def upload_data_to_sheets():
             write_column(upload_data[row_index], writing_range)
 
 
-def run_links_updater():
+def run_updater():
     # создаём множество ссылок на товары из таблицы
     local_links = get_local_links()
     local_set = set(link for link in local_links)
