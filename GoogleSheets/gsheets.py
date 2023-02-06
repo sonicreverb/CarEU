@@ -16,10 +16,27 @@ sheet = service.spreadsheets()
 
 def read_column(column_name):
     result = service.spreadsheets().values().get(
-        spreadsheetId=spreadsheet_id, range=sheet_name+'!'+column_name+':'+column_name).execute()
+        spreadsheetId=spreadsheet_id, range=sheet_name+'!'+column_name+'2:'+column_name).execute()
 
     values = []
     for value in result.get('values'):
         values.append(value[0])
 
     return values
+
+
+def write_column(data, wr_range):
+    service.spreadsheets().values().update(
+        spreadsheetId=spreadsheet_id,
+        range=wr_range,
+        valueInputOption="RAW",
+        body={'values': data}
+    ).execute()
+
+
+def get_last_row():
+    rows = service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=sheet_name + "!" + "A:Z").execute().\
+        get('values', [])
+    last_row_id = len(rows)
+    return last_row_id
+

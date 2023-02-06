@@ -1,8 +1,8 @@
-import json
+﻿import json
 import os.path
 from _init_ import BASE_DIR
-from scraper.scraper_main import create_driver, get_htmlsoup, get_data  # , write_product_to_excel
-from GoogleSheets.gsheets import read_column
+from scraper.scraper_main import create_driver, get_htmlsoup, get_data
+from GoogleSheets.gsheets import read_column, write_column, get_last_row
 
 
 def get_product_links_from_page(url):
@@ -15,8 +15,8 @@ def get_product_links_from_page(url):
         for link in soup_a_li:
             try:
                 al_output.write(HOST + link.get('href') + "\n")
-            except:
-                print('error: links not found')
+            except Exception as exc:
+                print('error: links not found', exc)
     print(len(soup_a_li), url)
 
     # переход на следующую страницу
@@ -24,8 +24,8 @@ def get_product_links_from_page(url):
         try:
             get_product_links_from_page(HOST + soup.find('a', class_='pagination-nav pagination-nav-right btn '
                                                                      'btn--muted btn--s').get('href'))
-        except:
-            print('warning: next page link not found')
+        except Exception as exc:
+            print('warning: next page link not found', exc)
 
 
 def get_all_active_links():
@@ -39,18 +39,317 @@ def get_all_active_links():
 
 
 def get_local_links():
-    return read_column('D')
+    return read_column('B')
 
 
-XLSX_PATH = os.path.join(BASE_DIR, 'scraper', 'excel tables', 'product_data.xlsx')
-CSV_PATH = os.path.join(BASE_DIR, 'scraper', 'excel tables', 'product_data.csv')
+def upload_data_to_sheets():
+    with open('products_json.txt') as input_file:
+        data = json.load(input_file)
+        products = data['products']
+
+        # каждый столбец, который будет записан - массив, думаю, что найдётся способ это оптимизировать, а пока todo
+        upload_products_names = []
+        upload_products_urls = []
+        upload_products_prices_brutto = []
+        upload_products_prices_netto = []
+        upload_products_charachteristics = []
+        upload_products_descriptions = []
+        upload_products_dealername = []
+        upload_products_dealersite = []
+        upload_products_dealerphonenumber = []
+
+        upload_products_img1 = []
+        upload_products_img2 = []
+        upload_products_img3 = []
+        upload_products_img4 = []
+        upload_products_img5 = []
+        upload_products_img6 = []
+        upload_products_img7 = []
+        upload_products_img8 = []
+        upload_products_img9 = []
+        upload_products_img10 = []
+        upload_products_img11 = []
+        upload_products_img12 = []
+        upload_products_img13 = []
+        upload_products_img14 = []
+        upload_products_img15 = []
+
+        upload_products_category1 = []
+        upload_products_category2 = []
+        upload_products_category3 = []
+        upload_products_category4 = []
+        upload_products_category5 = []
+        upload_products_category6 = []
+        upload_products_category7 = []
+        upload_products_category8 = []
+        upload_products_category9 = []
+        upload_products_category10 = []
+        upload_products_category11 = []
+        upload_products_category12 = []
+        upload_products_category13 = []
+        upload_products_category14 = []
+        upload_products_category15 = []
+        upload_products_category16 = []
+        upload_products_category17 = []
+        upload_products_category18 = []
+        upload_products_category19 = []
+        upload_products_category20 = []
+        upload_products_category21 = []
+        upload_products_category22 = []
+        upload_products_category23 = []
+        upload_products_category24 = []
+
+        upload_data = [upload_products_names,
+                       upload_products_urls,
+                       upload_products_prices_brutto,
+                       upload_products_prices_netto,
+                       upload_products_charachteristics,
+                       upload_products_descriptions,
+                       upload_products_dealername,
+                       upload_products_dealersite,
+                       upload_products_dealerphonenumber,
+
+                       upload_products_img1,
+                       upload_products_img2,
+                       upload_products_img3,
+                       upload_products_img4,
+                       upload_products_img5,
+                       upload_products_img6,
+                       upload_products_img7,
+                       upload_products_img8,
+                       upload_products_img9,
+                       upload_products_img10,
+                       upload_products_img11,
+                       upload_products_img12,
+                       upload_products_img13,
+                       upload_products_img14,
+                       upload_products_img15,
+
+                       upload_products_category1,
+                       upload_products_category2,
+                       upload_products_category3,
+                       upload_products_category4,
+                       upload_products_category5,
+                       upload_products_category6,
+                       upload_products_category7,
+                       upload_products_category8,
+                       upload_products_category9,
+                       upload_products_category10,
+                       upload_products_category11,
+                       upload_products_category12,
+                       upload_products_category13,
+                       upload_products_category14,
+                       upload_products_category15,
+                       upload_products_category16,
+                       upload_products_category17,
+                       upload_products_category18,
+                       upload_products_category19,
+                       upload_products_category20,
+                       upload_products_category21,
+                       upload_products_category22,
+                       upload_products_category23,
+                       upload_products_category24, ]
+
+        # переменная объявлена сейчас, чтобы далее в цикле каждый раз не вызывать get_last_row
+        last_row = str(get_last_row() + 1)
+
+        for product in products:
+            upload_products_names.append([product['Title']])
+            upload_products_urls.append([product['URL']])
+            upload_products_prices_brutto.append([int(product['BruttoPrice'])])
+            upload_products_prices_netto.append([int(product['NettoPrice'])])
+            upload_products_charachteristics.append([product['CharacteristicsStr']])
+
+            try:
+                upload_products_dealername.append([product['DealerData'][0]])
+                upload_products_dealersite.append([product['DealerData'][1]])
+                upload_products_dealerphonenumber.append([product['DealerData'][2]])
+            except Exception as exc:
+                print(exc)
+                upload_products_dealername.append([' '])
+                upload_products_dealersite.append([' '])
+                upload_products_dealerphonenumber.append([' '])
+
+            # todo IMGLI
+            if len(product['ImgLi']) >= 1:
+                upload_products_img1.append([product['ImgLi'][0]])
+            else:
+                upload_products_img1.append([' '])
+            if len(product['ImgLi']) >= 2:
+                upload_products_img2.append([product['ImgLi'][1]])
+            else:
+                upload_products_img2.append([' '])
+            if len(product['ImgLi']) >= 3:
+                upload_products_img3.append([product['ImgLi'][2]])
+            else:
+                upload_products_img3.append([' '])
+            if len(product['ImgLi']) >= 4:
+                upload_products_img4.append([product['ImgLi'][3]])
+            else:
+                upload_products_img4.append([' '])
+            if len(product['ImgLi']) >= 5:
+                upload_products_img5.append([product['ImgLi'][4]])
+            else:
+                upload_products_img5.append([' '])
+            if len(product['ImgLi']) >= 6:
+                upload_products_img6.append([product['ImgLi'][5]])
+            else:
+                upload_products_img6.append([' '])
+            if len(product['ImgLi']) >= 7:
+                upload_products_img7.append([product['ImgLi'][6]])
+            else:
+                upload_products_img7.append([' '])
+            if len(product['ImgLi']) >= 8:
+                upload_products_img8.append([product['ImgLi'][7]])
+            else:
+                upload_products_img8.append([' '])
+            if len(product['ImgLi']) >= 9:
+                upload_products_img9.append([product['ImgLi'][8]])
+            else:
+                upload_products_img9.append([' '])
+            if len(product['ImgLi']) >= 10:
+                upload_products_img10.append([product['ImgLi'][9]])
+            else:
+                upload_products_img10.append([' '])
+            if len(product['ImgLi']) >= 11:
+                upload_products_img11.append([product['ImgLi'][10]])
+            else:
+                upload_products_img11.append([' '])
+            if len(product['ImgLi']) >= 12:
+                upload_products_img12.append([product['ImgLi'][11]])
+            else:
+                upload_products_img12.append([' '])
+            if len(product['ImgLi']) >= 13:
+                upload_products_img13.append([product['ImgLi'][12]])
+            else:
+                upload_products_img13.append([' '])
+            if len(product['ImgLi']) >= 14:
+                upload_products_img14.append([product['ImgLi'][13]])
+            else:
+                upload_products_img14.append([' '])
+            if len(product['ImgLi']) >= 15:
+                upload_products_img15.append([product['ImgLi'][14]])
+            else:
+                upload_products_img15.append([' '])
+
+            # todo CATEGORIES
+            techopt = product['TechOptDict']
+
+            if 'Категория' in techopt:
+                upload_products_category1.append([techopt['Категория']])
+            else:
+                upload_products_category1.append([''])
+            if 'Первая регистрация' in techopt:
+                upload_products_category2.append([techopt['Первая регистрация']])
+            else:
+                upload_products_category2.append([''])
+            if 'Коробка передач' in techopt:
+                upload_products_category3.append([techopt['Коробка передач']])
+            else:
+                upload_products_category3.append([''])
+            if 'Топливо' in techopt:
+                upload_products_category4.append([techopt['Топливо']])
+            else:
+                upload_products_category5.append([''])
+            if 'Пробег' in techopt:
+                upload_products_category6.append([techopt['Пробег']])
+            else:
+                upload_products_category6.append([''])
+            if 'Мощность' in techopt:
+                upload_products_category7.append([techopt['Мощность']])
+            else:
+                upload_products_category7.append([''])
+            if 'Объем двигателя' in techopt:
+                upload_products_category8.append([techopt['Объем двигателя']])
+            else:
+                upload_products_category8.append([''])
+            if 'Количество мест' in techopt:
+                upload_products_category9.append([techopt['Количество мест']])
+            else:
+                upload_products_category9.append([''])
+            if 'Число дверей' in techopt:
+                upload_products_category10.append([techopt['Число дверей']])
+            else:
+                upload_products_category10.append([''])
+            if 'Класс экологической безопасности' in techopt:
+                upload_products_category11.append([techopt['Класс экологической безопасности']])
+            else:
+                upload_products_category11.append([''])
+            if 'Количество владельцев транспортного средства' in techopt:
+                upload_products_category12.append([techopt['Количество владельцев транспортного средства']])
+            else:
+                upload_products_category12.append([''])
+            if 'Общий осмотр' in techopt:
+                upload_products_category13.append([techopt['Общий осмотр']])
+            else:
+                upload_products_category13.append([''])
+            if 'Цвет' in techopt:
+                upload_products_category14.append([techopt['Цвет']])
+            else:
+                upload_products_category14.append([''])
+            if 'Цвет по классификации производителя' in techopt:
+                upload_products_category15.append([techopt['Цвет по классификации производителя']])
+            else:
+                upload_products_category15.append([''])
+            if 'Состояние транспортного средства' in techopt:
+                upload_products_category16.append([techopt['Состояние транспортного средства']])
+            else:
+                upload_products_category16.append([''])
+            if 'Оригинал' in techopt:
+                upload_products_category17.append([techopt['Оригинал']])
+            else:
+                upload_products_category17.append([''])
+            if 'Потребление' in techopt:
+                upload_products_category18.append([techopt['Потребление']])
+            else:
+                upload_products_category18.append([''])
+            if 'CO₂ Emissions' in techopt:
+                upload_products_category19.append([techopt['CO₂ Emissions']])
+            else:
+                upload_products_category19.append([''])
+            if 'Датчики парковки' in techopt:
+                upload_products_category20.append([techopt['Датчики парковки']])
+            else:
+                upload_products_category20.append([''])
+            if 'Дизайн салона' in techopt:
+                upload_products_category21.append([techopt['Дизайн салона']])
+            else:
+                upload_products_category21.append([''])
+            if 'Номер транспортного средства' in techopt:
+                upload_products_category22.append([techopt['Номер транспортного средства']])
+            else:
+                upload_products_category22.append([''])
+            if 'Наличие' in techopt:
+                upload_products_category23.append([techopt['Наличие']])
+            else:
+                upload_products_category23.append([''])
+            if 'Вид основного топлива' in techopt:
+                upload_products_category24.append([techopt['Вид основного топлива']])
+            else:
+                upload_products_category24.append([''])
+
+        # непосредственно запись в таблицу, каждый массив - столбец в таблице
+
+        for row_index in range(len(upload_data)):
+            # 26 - кол-во букв в англ. алфавите, 65 - константа для преобразований числового индекса через ascii
+            # в название столбца
+            if row_index < 26:
+                row_name = chr(row_index + 65)
+            else:
+                row_name = 'A' + chr(row_index - 26 + 65)
+
+            writing_range = row_name + last_row + ':' + row_name
+            write_column(upload_data[row_index], writing_range)
 
 
-def update_links():
+def run_links_updater():
+    # создаём множество ссылок на товары из таблицы
     local_links = get_local_links()
     local_set = set(link for link in local_links)
+    print(local_links[0:3])
     print("local set done")
 
+    # создаём множество актуальных ссылок на товары прямиком с mobile.de
     get_all_active_links()
     with open(os.path.join(BASE_DIR, "scraper", "links", "active_links.txt"), "r") as inp:
         active_li = []
@@ -59,20 +358,35 @@ def update_links():
     active_set = set(active_li)
     print("active set done")
 
+    # вычитаем множества и получаем ссылки, которые надо пометить неактивными в таблице, а также ссылки которые
+    # необходимо спарсить и дозагрузить в таблице
     del_links = local_set - active_set
     upd_links = active_set - local_set
+    print('total upd links: ', len(upd_links))
 
-    tmp = 1
+    # отмечаем неактивные товары в таблице
+    activity_row = []
+    for link in local_links:
+        if link not in del_links:
+            activity_row.append(['Да'])
+        else:
+            activity_row.append(['Нет'])
+    write_column(activity_row, 'AW2:AW')
+
+    # очищаем товары, которые остались в json после прошлой сессии парсера
+    open('products_json.txt', 'w').close()
+
+    # непосредственно парсинг товаров и их запись в json
+    link_counter = 1
     for link in upd_links:
         try:
-            print(tmp, link)
+            print(link_counter, link)
 
             if os.path.exists('products_json.txt'):
                 with open('products_json.txt') as input_file:
                     data = json.load(input_file)
             else:
-                data = {}
-                data['products'] = []
+                data = {'products': []}
 
             product_data = get_data(link.strip(), create_driver())
             data['products'].append(product_data)
@@ -80,57 +394,10 @@ def update_links():
             with open('products_json.txt', 'w') as output_file:
                 json.dump(data, output_file)
 
-            tmp += 1
+            link_counter += 1
 
-        except:
-            pass
+        except Exception as exc:
+            print(exc)
 
-
-    # отметка неактивных в таблице
-    # workbook = load_workbook(XLSX_PATH)
-    # worksheet = workbook['data']
-    #
-    # del_line_nums = []
-    #
-    # for link in del_links:
-    #   print("del", link)
-    #    #del_line_nums.append(int(local_dict[link]))
-    #    line_num = str(local_dict[link])
-    #    worksheet["BA" + line_num] = "Нет"
-    #
-    # workbook.save(XLSX_PATH)
-    # workbook.close()
-
-    # upload_csv_to_sheets(XLSX_PATH, CSV_PATH)
-
-    # удаление неактивных строк из таблицы
-    # workbook = load_workbook(XLSX_PATH)
-    # worksheet = workbook['data']
-    #
-    # del_line_nums.sort()
-    # for del_num in reversed(del_line_nums):
-    #   worksheet.delete_rows(del_num)
-    #    print(del_num)
-    #
-    # workbook.save(XLSX_PATH)
-    # workbook.close()
-
-    # добавление в таблицу новых товаров
-    # print(len(upd_links))
-    # tmp = 1
-    # for link in upd_links:
-    #    try:
-    #        print("upd", tmp, link)
-    #        data = get_data(link.strip(), create_driver())
-    #        write_product_to_excel(data)
-    #        if tmp % 100 == 0:
-    #            upload_csv_to_sheets(XLSX_PATH, CSV_PATH)
-    #        tmp += 1
-    #    except:
-    #        pass
-
-    # запись и чтение в json
-
-
-update_links()
-
+    # загрузка товаров из json в таблице
+    upload_data_to_sheets()
