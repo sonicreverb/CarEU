@@ -252,83 +252,83 @@ def upload_data_to_sheets():
             if 'Топливо' in techopt:
                 upload_products_category4.append([techopt['Топливо']])
             else:
-                upload_products_category5.append([''])
+                upload_products_category4.append([''])
             if 'Пробег' in techopt:
-                upload_products_category6.append([techopt['Пробег']])
+                upload_products_category5.append([techopt['Пробег']])
+            else:
+                upload_products_category5.append([''])
+            if 'Мощность' in techopt:
+                upload_products_category6.append([techopt['Мощность']])
             else:
                 upload_products_category6.append([''])
-            if 'Мощность' in techopt:
-                upload_products_category7.append([techopt['Мощность']])
+            if 'Объем двигателя' in techopt:
+                upload_products_category7.append([techopt['Объем двигателя']])
             else:
                 upload_products_category7.append([''])
-            if 'Объем двигателя' in techopt:
-                upload_products_category8.append([techopt['Объем двигателя']])
+            if 'Количество мест' in techopt:
+                upload_products_category8.append([techopt['Количество мест']])
             else:
                 upload_products_category8.append([''])
-            if 'Количество мест' in techopt:
-                upload_products_category9.append([techopt['Количество мест']])
+            if 'Число дверей' in techopt:
+                upload_products_category9.append([techopt['Число дверей']])
             else:
                 upload_products_category9.append([''])
-            if 'Число дверей' in techopt:
-                upload_products_category10.append([techopt['Число дверей']])
+            if 'Класс экологической безопасности' in techopt:
+                upload_products_category10.append([techopt['Класс экологической безопасности']])
             else:
                 upload_products_category10.append([''])
-            if 'Класс экологической безопасности' in techopt:
-                upload_products_category11.append([techopt['Класс экологической безопасности']])
+            if 'Количество владельцев транспортного средства' in techopt:
+                upload_products_category11.append([techopt['Количество владельцев транспортного средства']])
             else:
                 upload_products_category11.append([''])
-            if 'Количество владельцев транспортного средства' in techopt:
-                upload_products_category12.append([techopt['Количество владельцев транспортного средства']])
+            if 'Общий осмотр' in techopt:
+                upload_products_category12.append([techopt['Общий осмотр']])
             else:
                 upload_products_category12.append([''])
-            if 'Общий осмотр' in techopt:
-                upload_products_category13.append([techopt['Общий осмотр']])
+            if 'Цвет' in techopt:
+                upload_products_category13.append([techopt['Цвет']])
             else:
                 upload_products_category13.append([''])
-            if 'Цвет' in techopt:
-                upload_products_category14.append([techopt['Цвет']])
+            if 'Цвет по классификации производителя' in techopt:
+                upload_products_category14.append([techopt['Цвет по классификации производителя']])
             else:
                 upload_products_category14.append([''])
-            if 'Цвет по классификации производителя' in techopt:
-                upload_products_category15.append([techopt['Цвет по классификации производителя']])
+            if 'Состояние транспортного средства' in techopt:
+                upload_products_category15.append([techopt['Состояние транспортного средства']])
             else:
                 upload_products_category15.append([''])
-            if 'Состояние транспортного средства' in techopt:
-                upload_products_category16.append([techopt['Состояние транспортного средства']])
+            if 'Оригинал' in techopt:
+                upload_products_category16.append([techopt['Оригинал']])
             else:
                 upload_products_category16.append([''])
-            if 'Оригинал' in techopt:
-                upload_products_category17.append([techopt['Оригинал']])
+            if 'Потребление' in techopt:
+                upload_products_category17.append([techopt['Потребление']])
             else:
                 upload_products_category17.append([''])
-            if 'Потребление' in techopt:
-                upload_products_category18.append([techopt['Потребление']])
+            if 'CO₂ Emissions' in techopt:
+                upload_products_category18.append([techopt['CO₂ Emissions']])
             else:
                 upload_products_category18.append([''])
-            if 'CO₂ Emissions' in techopt:
-                upload_products_category19.append([techopt['CO₂ Emissions']])
+            if 'Датчики парковки' in techopt:
+                upload_products_category19.append([techopt['Датчики парковки']])
             else:
                 upload_products_category19.append([''])
-            if 'Датчики парковки' in techopt:
-                upload_products_category20.append([techopt['Датчики парковки']])
+            if 'Дизайн салона' in techopt:
+                upload_products_category20.append([techopt['Дизайн салона']])
             else:
                 upload_products_category20.append([''])
-            if 'Дизайн салона' in techopt:
-                upload_products_category21.append([techopt['Дизайн салона']])
+            if 'Номер транспортного средства' in techopt:
+                upload_products_category21.append([techopt['Номер транспортного средства']])
             else:
                 upload_products_category21.append([''])
-            if 'Номер транспортного средства' in techopt:
-                upload_products_category22.append([techopt['Номер транспортного средства']])
+            if 'Наличие' in techopt:
+                upload_products_category22.append([techopt['Наличие']])
             else:
                 upload_products_category22.append([''])
-            if 'Наличие' in techopt:
-                upload_products_category23.append([techopt['Наличие']])
+            if 'Вид основного топлива' in techopt:
+                upload_products_category23.append([techopt['Вид основного топлива']])
             else:
                 upload_products_category23.append([''])
-            if 'Вид основного топлива' in techopt:
-                upload_products_category24.append([techopt['Вид основного топлива']])
-            else:
-                upload_products_category24.append([''])
 
         # непосредственно запись в таблицу, каждый массив - столбец в таблице
 
