@@ -159,6 +159,7 @@ def upload_data_to_sheets():
             upload_products_prices_brutto.append([int(product['BruttoPrice'])])
             upload_products_prices_netto.append([int(product['NettoPrice'])])
             upload_products_charachteristics.append([product['CharacteristicsStr']])
+            upload_products_descriptions.append([product['DescriptionStr']])
 
             try:
                 upload_products_dealername.append([product['DealerData'][0]])
