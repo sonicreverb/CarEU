@@ -376,7 +376,7 @@ def run_updater():
     write_column(activity_row, 'AW2:AW')
 
     # очищаем товары, которые остались в json после прошлой сессии парсера
-    open('products_json.txt', 'w').close()
+    os.remove('products_json.txt')
 
     # непосредственно парсинг товаров и их запись в json
     link_counter = 1
