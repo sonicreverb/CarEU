@@ -1,14 +1,14 @@
 ﻿import json
 import os.path
 from _init_ import BASE_DIR
-from scraper.scraper_main import create_driver, get_htmlsoup, get_data
+from scraper.scraper_main import get_htmlsoup, get_data
 from GoogleSheets.gsheets import read_column, write_column, get_last_row
 
 HOST = "https://www.mobile.de"
 
 
 def get_product_links_from_page(url):
-    soup = get_htmlsoup(url, create_driver())
+    soup = get_htmlsoup(url)
 
     # поиск и запись в массив всех ссылок на товары со страницы
     soup_a_li = soup.find_all('a', class_='vehicle-data track-event u-block js-track-event js-track-dealer-ratings')
@@ -352,7 +352,6 @@ def run_updater():
     print("local set done")
 
     # создаём множество актуальных ссылок на товары прямиком с mobile.de
-    get_all_active_links()
     with open(os.path.join(BASE_DIR, "scraper", "links", "active_links.txt"), "r") as inp:
         active_li = []
         for line in inp:
@@ -373,10 +372,11 @@ def run_updater():
             activity_row.append(['Да'])
         else:
             activity_row.append(['Нет'])
-    write_column(activity_row, 'AW2:AW')
+    write_column(activity_row, 'AV2:AV')
 
     # очищаем товары, которые остались в json после прошлой сессии парсера
-    os.remove('products_json.txt')
+    if os.path.exists('products_json.txt'):
+        os.remove('products_json.txt')
 
     # непосредственно парсинг товаров и их запись в json
     link_counter = 1
@@ -390,7 +390,7 @@ def run_updater():
             else:
                 data = {'products': []}
 
-            product_data = get_data(link.strip(), create_driver())
+            product_data = get_data(link.strip())
             data['products'].append(product_data)
 
             with open('products_json.txt', 'w') as output_file:

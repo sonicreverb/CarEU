@@ -14,7 +14,8 @@ def create_driver():
     return driver
 
 
-def get_htmlsoup(url, driver):
+def get_htmlsoup(url):
+    driver = create_driver()
     try:
         driver.get(url)
         time.sleep(1)
@@ -27,8 +28,8 @@ def get_htmlsoup(url, driver):
         return 'error invalid url'
 
 
-def get_data(url, driver):
-    soup = get_htmlsoup(url, driver)
+def get_data(url):
+    soup = get_htmlsoup(url)
     if soup == 'error invalid url':
         return None
 
