@@ -3,7 +3,7 @@ from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
 from bs4 import BeautifulSoup
-from scraper.authentication.auth import auth_and_get_cookies
+from mobile_scraper.authentication.auth import auth_and_get_cookies
 from datetime import datetime
 import time
 import os

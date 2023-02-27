@@ -1,8 +1,8 @@
 ﻿import json
 import os.path
 from main import BASE_DIR
-from scraper.scraper_main import get_htmlsoup, get_data
-from scraper.GoogleSheets.gsheets import read_column, write_column, get_last_row
+from mobile_scraper.scraper_main import get_htmlsoup, get_data
+from mobile_scraper.GoogleSheets.gsheets import read_column, write_column, get_last_row
 
 HOST = "https://www.mobile.de"
 

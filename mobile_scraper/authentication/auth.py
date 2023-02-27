@@ -1,4 +1,6 @@
-from scraper.scraper_main import create_driver
+from selenium import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from main import BASE_DIR
 import json
@@ -7,9 +9,18 @@ import os.path
 import time
 
 
+def create_driver():
+    chrome_options = webdriver.ChromeOptions()
+    prefs = {"profile.managed_default_content_settings.images": 2}
+    chrome_options.add_experimental_option("prefs", prefs)
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+    return driver
+
+
 def auth_and_get_cookies():
     # данные для авторизации
-    with open('mobile_credentials.json', encoding='utf-8') as f:
+    with open(os.path.join(BASE_DIR, 'mobile_scraper', 'authentication', 'mobile_credentials.json'), encoding='utf-8') as f:
         creds = json.load(f)
 
     EMAIL = creds['email']
