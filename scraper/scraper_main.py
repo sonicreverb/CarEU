@@ -1,8 +1,13 @@
+from main import BASE_DIR
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
 from bs4 import BeautifulSoup
+from scraper.authentication.auth import auth_and_get_cookies
+from datetime import datetime
 import time
+import os
+import pickle
 
 
 def create_driver():
@@ -16,9 +21,24 @@ def create_driver():
 
 def get_htmlsoup(url):
     driver = create_driver()
+
+    # проверка на валидность куки
+    cookies_birthday = os.path.getmtime(os.path.join(BASE_DIR, 'scraper', 'auth', 'cookies.pkl'))
+    if time.ctime(cookies_birthday).split()[3] != datetime.now().day:
+        auth_and_get_cookies()
+
     try:
+        # загружаем куки
         driver.get(url)
-        time.sleep(1)
+        time.sleep(5)
+
+        for cookie in pickle.load(open(os.path.join(BASE_DIR, 'scraper', 'auth', 'cookies.pkl'), 'rb')):
+            driver.add_cookie(cookie)
+
+        time.sleep(5)
+        driver.refresh()
+        time.sleep(10)
+
         soup = BeautifulSoup(driver.page_source, 'html.parser')
         driver.close()
         return soup
