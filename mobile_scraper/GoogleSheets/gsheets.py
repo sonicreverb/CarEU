@@ -7,7 +7,7 @@ spreadsheet_id = '13kWLMsatq8brJWiQRAaYKzxMgB4Ohh874ebtJOABvZo'
 sheet_name = 'data'
 
 scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-sacc_json_path = os.path.join(BASE_DIR, 'scraper', 'GoogleSheets', 'creds', 'sacc1.json')
+sacc_json_path = os.path.join(BASE_DIR, 'mobile_scraper', 'GoogleSheets', 'creds', 'sacc1.json')
 
 credentials = ServiceAccountCredentials.from_json_keyfile_name(sacc_json_path, scope)
 service = build('sheets', 'v4', credentials=credentials)

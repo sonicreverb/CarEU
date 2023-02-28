@@ -57,7 +57,7 @@ def auth_and_get_cookies():
     time.sleep(10)
 
     # кукис
-    pickle.dump(driver.get_cookies(), open(os.path.join(BASE_DIR, 'mobile_scraper', 'auth', 'cookies.pkl'), 'wb'))
+    pickle.dump(driver.get_cookies(), open(os.path.join(BASE_DIR, 'mobile_scraper', 'authentication', 'cookies.pkl'), 'wb'))
 
 
 def test_with_cookies():
@@ -66,14 +66,9 @@ def test_with_cookies():
 
     time.sleep(5)
 
-    for cookie in pickle.load(open(os.path.join(BASE_DIR, 'mobile_scraper', 'auth', 'cookies.pkl'), 'rb')):
+    for cookie in pickle.load(open(os.path.join(BASE_DIR, 'mobile_scraper', 'authentication', 'cookies.pkl'), 'rb')):
         driver.add_cookie(cookie)
 
     time.sleep(5)
     driver.refresh()
     time.sleep(10)
-
-
-auth_and_get_cookies()
-test_with_cookies()
-

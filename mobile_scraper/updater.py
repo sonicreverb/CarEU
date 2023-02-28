@@ -12,7 +12,7 @@ def get_product_links_from_page(url):
 
     # поиск и запись в массив всех ссылок на товары со страницы
     soup_a_li = soup.find_all('a', class_='vehicle-data track-event u-block js-track-event js-track-dealer-ratings')
-    with open(os.path.join(BASE_DIR, "scraper", "data", "active_links.txt"), "a") as al_output:
+    with open(os.path.join(BASE_DIR, "mobile_scraper", "data", "active_links.txt"), "a") as al_output:
         for link in soup_a_li:
             try:
                 al_output.write(HOST + link.get('href') + "\n")
@@ -31,10 +31,10 @@ def get_product_links_from_page(url):
 
 def get_all_active_links():
     # очистка содержимого active_links.txt
-    with open(os.path.join(BASE_DIR, "scraper", "data", "active_links.txt"), "w"):
+    with open(os.path.join(BASE_DIR, "mobile_scraper", "data", "active_links.txt"), "w"):
         pass
 
-    with open(os.path.join(BASE_DIR, "scraper", "data", "filtered_links.txt")) as fl_input:
+    with open(os.path.join(BASE_DIR, "mobile_scraper", "data", "filtered_links.txt")) as fl_input:
         for filtered_link in fl_input:
             get_product_links_from_page(filtered_link)
 
@@ -44,7 +44,7 @@ def get_local_links():
 
 
 def upload_data_to_sheets():
-    with open('products_json.txt') as input_file:
+    with open(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt')) as input_file:
         data = json.load(input_file)
         products = data['products']
 
@@ -352,7 +352,7 @@ def run_updater():
     print("local set done")
 
     # создаём множество актуальных ссылок на товары прямиком с mobile.de
-    with open(os.path.join(BASE_DIR, "scraper", "data", "active_links.txt"), "r") as inp:
+    with open(os.path.join(BASE_DIR, "mobile_scraper", "data", "active_links.txt"), "r") as inp:
         active_li = []
         for line in inp:
             active_li.append(line.strip())
@@ -375,8 +375,8 @@ def run_updater():
     write_column(activity_row, 'AV2:AV')
 
     # очищаем товары, которые остались в json после прошлой сессии парсера
-    if os.path.exists(os.path.join(BASE_DIR, 'scraper', 'data', 'products_json.txt')):
-        os.remove(os.path.join(BASE_DIR, 'scraper', 'data', 'products_json.txt'))
+    if os.path.exists(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt')):
+        os.remove(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt'))
 
     # непосредственно парсинг товаров и их запись в json
     link_counter = 1
@@ -384,8 +384,8 @@ def run_updater():
         try:
             print(link_counter, link)
 
-            if os.path.exists(os.path.join(BASE_DIR, 'scraper', 'data', 'products_json.txt')):
-                with open(os.path.join(BASE_DIR, 'scraper', 'data', 'products_json.txt')) as input_file:
+            if os.path.exists(os.path.join(BASE_DIR, 'monile_scraper', 'data', 'products_json.txt')):
+                with open(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt')) as input_file:
                     data = json.load(input_file)
             else:
                 data = {'products': []}
@@ -393,7 +393,7 @@ def run_updater():
             product_data = get_data(link.strip())
             data['products'].append(product_data)
 
-            with open(os.path.join(BASE_DIR, 'scraper', 'data', 'products_json.txt')) as output_file:
+            with open(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt')) as output_file:
                 json.dump(data, output_file)
 
             link_counter += 1

@@ -23,21 +23,19 @@ def get_htmlsoup(url):
     driver = create_driver()
 
     # проверка на валидность куки
-    cookies_birthday = os.path.getmtime(os.path.join(BASE_DIR, 'scraper', 'auth', 'cookies.pkl'))
-    if time.ctime(cookies_birthday).split()[3] != datetime.now().day:
+    cookies_birthday = os.path.getmtime(os.path.join(BASE_DIR, 'mobile_scraper', 'authentication', 'cookies.pkl'))
+    if time.ctime(cookies_birthday).split()[2] != str(datetime.now().day):
         auth_and_get_cookies()
 
     try:
         # загружаем куки
         driver.get(url)
-        time.sleep(5)
 
-        for cookie in pickle.load(open(os.path.join(BASE_DIR, 'scraper', 'auth', 'cookies.pkl'), 'rb')):
+        for cookie in pickle.load(open(os.path.join(BASE_DIR, 'mobile_scraper', 'authentication', 'cookies.pkl'),
+                                       'rb')):
             driver.add_cookie(cookie)
 
-        time.sleep(5)
         driver.refresh()
-        time.sleep(10)
 
         soup = BeautifulSoup(driver.page_source, 'html.parser')
         driver.close()
