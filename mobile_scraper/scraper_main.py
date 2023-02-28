@@ -23,8 +23,11 @@ def get_htmlsoup(url):
     driver = create_driver()
 
     # проверка на валидность куки
-    cookies_birthday = os.path.getmtime(os.path.join(BASE_DIR, 'mobile_scraper', 'authentication', 'cookies.pkl'))
-    if time.ctime(cookies_birthday).split()[2] != str(datetime.now().day):
+    try:
+        cookies_birthday = os.path.getmtime(os.path.join(BASE_DIR, 'mobile_scraper', 'authentication', 'cookies.pkl'))
+        if time.ctime(cookies_birthday).split()[2] != str(datetime.now().day):
+            auth_and_get_cookies()
+    except FileNotFoundError:
         auth_and_get_cookies()
 
     try:
