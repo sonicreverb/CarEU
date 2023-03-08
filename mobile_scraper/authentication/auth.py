@@ -23,8 +23,8 @@ def auth_and_get_cookies():
     with open(os.path.join(BASE_DIR, 'mobile_scraper', 'authentication', 'mobile_credentials.json'), encoding='utf-8') as f:
         creds = json.load(f)
 
-    EMAIL = creds['email']
-    PASSWORD = creds['password']
+    email = creds['email']
+    password = creds['password']
     auth_url = "https://id.mobile.de/login?service=https%3A%2F%2Fid.mobile.de%2Foauth2.0%2FcallbackAuthorize%3Fclient_id%3Dmobile_web_DL1WJUPw%26redirect_uri%3Dhttps%253A%252F%252Fwww.mobile.de%252Fapi%252Fauth%252FloginCallback%253F%26response_type%3Dcode%26response_mode%3Dquery%26client_name%3DCasOAuthClient&lang=de&state=eyJybmQiOiIyYk9vYjZ1MS1pUERrYXJyQUxZcXFMSUx5X2l5YkRDOU1hYy1sbkgyREtrIiwic3JjIjoiaHR0cHM6Ly93d3cubW9iaWxlLmRlLyJ9&nonce=HK1W5WrtzGxUJWN_N5AKTHOBdd0xdrps8VaLzR9cqGE&scope=openid"
 
     driver = create_driver()
@@ -36,17 +36,19 @@ def auth_and_get_cookies():
 
         email_input = driver.find_element(By.ID, "login-username")
         email_input.clear()
-        email_input.send_keys(EMAIL)
+        email_input.send_keys(email)
 
         password_input = driver.find_element(By.ID, "login-password")
         password_input.clear()
-        password_input.send_keys(PASSWORD)
+        password_input.send_keys(password)
 
         # кнопки принятия пользовательского соглашения, подтвердить логин
         time.sleep(5)
-        if tmp == 0:
+        try:    
             accept_privacy_button = driver.find_element(By.XPATH, "/html/body/div[3]/div[2]/div[2]/div[1]/button")
             accept_privacy_button.click()
+        except Exception as exc:
+            print(exc)
         submit_button = driver.find_element(By.ID, "login-submit")
         submit_button.click()
 
@@ -57,7 +59,8 @@ def auth_and_get_cookies():
     time.sleep(10)
 
     # кукис
-    pickle.dump(driver.get_cookies(), open(os.path.join(BASE_DIR, 'mobile_scraper', 'authentication', 'cookies.pkl'), 'wb'))
+    pickle.dump(driver.get_cookies(), open(os.path.join(BASE_DIR, 'mobile_scraper', 'authentication', 'cookies.pkl'),
+                                           'wb'))
 
 
 def test_with_cookies():
