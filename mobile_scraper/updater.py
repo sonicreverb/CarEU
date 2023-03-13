@@ -40,7 +40,7 @@ def get_all_active_links():
 
 
 def get_local_links():
-    return read_column('B')
+    return read_column('B', 'data')
 
 
 def upload_data_to_sheets():
@@ -152,7 +152,7 @@ def upload_data_to_sheets():
                        upload_products_category24, ]
 
         # переменная объявлена сейчас, чтобы далее в цикле каждый раз не вызывать get_last_row
-        last_row = str(get_last_row() + 1)
+        last_row = str(get_last_row('data') + 1)
 
         for product in products:
             upload_products_names.append([product['Title']])
@@ -384,7 +384,7 @@ def run_updater():
         try:
             print(link_counter, link)
 
-            if os.path.exists(os.path.join(BASE_DIR, 'monile_scraper', 'data', 'products_json.txt')):
+            if os.path.exists(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt')):
                 with open(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt')) as input_file:
                     data = json.load(input_file)
             else:
@@ -393,7 +393,8 @@ def run_updater():
             product_data = get_data(link.strip())
             data['products'].append(product_data)
 
-            with open(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt')) as output_file:
+            with open(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt'), 'w', encoding='utf-8') \
+                    as output_file:
                 json.dump(data, output_file)
 
             link_counter += 1

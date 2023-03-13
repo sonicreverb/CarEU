@@ -34,6 +34,8 @@ def get_htmlsoup(url):
         # загружаем куки
         driver.get(url)
 
+        time.sleep(20)
+
         for cookie in pickle.load(open(os.path.join(BASE_DIR, 'mobile_scraper', 'authentication', 'cookies.pkl'),
                                        'rb')):
             driver.add_cookie(cookie)

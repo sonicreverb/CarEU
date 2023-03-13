@@ -4,7 +4,6 @@ from googleapiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
 
 spreadsheet_id = '13kWLMsatq8brJWiQRAaYKzxMgB4Ohh874ebtJOABvZo'
-sheet_name = 'data'
 
 scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
 sacc_json_path = os.path.join(BASE_DIR, 'mobile_scraper', 'GoogleSheets', 'creds', 'sacc1.json')
@@ -14,7 +13,7 @@ service = build('sheets', 'v4', credentials=credentials)
 sheet = service.spreadsheets()
 
 
-def read_column(column_name):
+def read_column(column_name, sheet_name):
     result = service.spreadsheets().values().get(
         spreadsheetId=spreadsheet_id, range=sheet_name+'!'+column_name+'2:'+column_name).execute()
 
@@ -34,7 +33,7 @@ def write_column(data, wr_range):
     ).execute()
 
 
-def get_last_row():
+def get_last_row(sheet_name):
     rows = service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=sheet_name + "!" + "A:Z").execute().\
         get('values', [])
     last_row_id = len(rows)
