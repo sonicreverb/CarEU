@@ -3,6 +3,7 @@ import os.path
 from main import BASE_DIR
 from mobile_scraper.scraper_main import get_htmlsoup, get_data
 from mobile_scraper.GoogleSheets.gsheets import read_column, write_column, get_last_row
+from mobile_scraper.links import read_mark_models
 
 HOST = "https://www.mobile.de"
 
@@ -40,7 +41,7 @@ def get_all_active_links():
 
 
 def get_local_links():
-    return read_column('B', 'data')
+    return read_column('D', 'data')
 
 
 def upload_data_to_sheets():
@@ -50,6 +51,8 @@ def upload_data_to_sheets():
 
         # каждый столбец, который будет записан - массив, думаю, что найдётся способ это оптимизировать, а пока todo
         upload_products_names = []
+        upload_products_models = []
+        upload_products_makes = []
         upload_products_urls = []
         upload_products_prices_brutto = []
         upload_products_prices_netto = []
@@ -101,6 +104,8 @@ def upload_data_to_sheets():
         upload_products_category24 = []
 
         upload_data = [upload_products_names,
+                       upload_products_makes,
+                       upload_products_models,
                        upload_products_urls,
                        upload_products_prices_brutto,
                        upload_products_prices_netto,
@@ -154,8 +159,26 @@ def upload_data_to_sheets():
         # переменная объявлена сейчас, чтобы далее в цикле каждый раз не вызывать get_last_row
         last_row = str(get_last_row('data') + 1)
 
+        # словарь моделей имеющихся марок
+        all_models_dict = read_mark_models()
+
         for product in products:
             upload_products_names.append([product['Title']])
+
+            # информация о марках и моделях
+            product_make = ' '
+            product_model = ' '
+
+            for make in all_models_dict:
+                if make in product['Title']:
+                    product_make = make
+                    for model in all_models_dict[make]:
+                        if model in product['Title']:
+                            product_model = model
+
+            upload_products_makes.append([product_make])
+            upload_products_models.append([product_model])
+
             upload_products_urls.append([product['URL']])
             upload_products_prices_brutto.append([int(product['BruttoPrice'])])
             upload_products_prices_netto.append([int(product['NettoPrice'])])

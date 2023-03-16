@@ -11,13 +11,6 @@ def get_models_links():
     make_list = soup.find_all('select', {'id': 'makeModelVariant1Make'})[0]
     make_list = make_list.find_all('option')
 
-    # XLSX_PATH = os.path.join(BASE_DIR, 'mobile_scraper', 'models_links.xlsx')
-    #
-    # workbook = openpyxl.load_workbook(XLSX_PATH)
-    # worksheet = workbook['data']
-    #
-    # line_num = 2
-
     upload_make = []
     upload_model = []
     upload_model_id = []
@@ -76,35 +69,36 @@ def get_models_links():
     write_column(upload_links, 'models!D2:D')
 
 
-def get_link_for_one_make_model():
-    make_li = read_column('A', 'models')
-    model_li = read_column('B', 'models')
-    # model_id_li = read_column('C', 'models')
-    links_li = read_column('D', 'models')
+def read_mark_models():
+    # чтение столбцов марок и моделей из таблицы
+    makes_li = read_column('A', 'models')
+    models_li = read_column('B', 'models')
 
-    upload_A_row = []
-    upload_B_row = []
-    upload_C_row = []
+    # инициализация словаря формата - модель: [марка_модели1, марка_модели2, ...]
+    makes_models_data = {make: [] for make in set(makes_li)}
 
-    for line_num in range(len(make_li)):
-        soup = get_htmlsoup(links_li[line_num])
+    # заполнение словаря моделями
+    for indx in range(len(makes_li)):
+        makes_models_data[makes_li[indx]].append(models_li[indx])
 
-        time.sleep(5)
+    return makes_models_data
 
-    #     while soup.find('span', class_='btn btn--primary btn--l next-resultitems-page'):
-    #         for product_block in soup.find_all('a', class_='link--muted no--text--decoration result-item'):
-    #
-    #             upload_A_row.append([make_li[line_num]])
-    #             upload_B_row.append([model_li[line_num]])
-    #             upload_C_row.append([product_block.get('href')])
-    #
-    #         soup = get_htmlsoup(soup.find('span', class_='btn btn--primary btn--l next-resultitems-page')
-    #                             .get('data-href'))
-    #
-    # write_column(upload_A_row, 'products_links!A2:A')
-    # write_column(upload_B_row, 'products_links!B2:B')
-    # write_column(upload_C_row, 'products_links!C2:C')
+# todo (captcha problem)
 
-
-# get_models_links()
-get_link_for_one_make_model()
+# def get_link_for_one_make_model():
+#     make_li = read_column('A', 'models')
+#     model_li = read_column('B', 'models')
+#     # model_id_li = read_column('C', 'models')
+#     links_li = read_column('D', 'models')
+#
+#     upload_A_row = []
+#     upload_B_row = []
+#     upload_C_row = []
+#
+#     for line_num in range(len(make_li)):
+#         soup = get_htmlsoup(links_li[line_num])
+#
+#         time.sleep(5)
+#
+#
+# get_link_for_one_make_model()
