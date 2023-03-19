@@ -372,12 +372,9 @@ def upload_data_to_sheets():
             else:
                 row_name = 'A' + chr(row_index - 26 + 65)
 
-            # print(upload_data[row_index])
-
-            writing_range = row_name + last_row + ':' + row_name
-            write_column(upload_data[row_index], writing_range)
-            print(row_index)
-            time.sleep(5)
+        writing_range = row_name + last_row + ':' + row_name
+        write_column(upload_data[row_index], writing_range)
+        time.sleep(5)
 
 
 def run_updater():
@@ -416,6 +413,7 @@ def run_updater():
 
     # непосредственно парсинг товаров и их запись в json
     link_counter = 1
+    print(upd_links, 'upd links')
     for link in upd_links:
         try:
             print(link_counter, link)
