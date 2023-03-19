@@ -51,9 +51,15 @@ def get_all_active_links():
             set_proxy(PROXY_FILENAMES[proxy_id])
             last_used_proxy_id = proxy_id
 
-            print(f'used proxy - {PROXY_FILENAMES[proxy_id - 1]}')
+            print(f'used proxy - {PROXY_FILENAMES[proxy_id]}')
             get_product_links_from_page(filtered_link)
             iteration_counter += 1
+
+            # инкрементация proxy_id с учётом кол-ва прокси
+            if proxy_id + 1 != len(PROXY_FILENAMES):
+                proxy_id += 1
+            else:
+                proxy_id = 0
 
         # избавляемся от прокси в конце выполнения парсинга
         remove_proxy(last_used_proxy_id)
