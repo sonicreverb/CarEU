@@ -428,7 +428,7 @@ def run_updater():
             activity_row.append(['Да'])
         else:
             activity_row.append(['Нет'])
-    write_column(activity_row, 'AV2:AV')
+    write_column(activity_row, 'AX2:AX')
 
     # очищаем товары, которые остались в json после прошлой сессии парсера
     if os.path.exists(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt')):
