@@ -1,3 +1,5 @@
+import time
+
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
@@ -16,25 +18,8 @@ def create_driver():
 def get_htmlsoup(url):
     driver = create_driver()
 
-    # проверка на валидность куки
-    # try:
-    #     cookies_birthday = os.path.getmtime(os.path.join(BASE_DIR, 'mobile_scraper', 'authentication', 'cookies.pkl'))
-    #     if time.ctime(cookies_birthday).split()[2] != str(datetime.now().day):
-    #         auth_and_get_cookies()
-    # except FileNotFoundError:
-    #     auth_and_get_cookies()
-
     try:
-        # загружаем куки
         driver.get(url)
-        #
-        # time.sleep(20)
-        #
-        # for cookie in pickle.load(open(os.path.join(BASE_DIR, 'mobile_scraper', 'authentication', 'cookies.pkl'),
-        #                                'rb')):
-        #     driver.add_cookie(cookie)
-        #
-        # driver.refresh()
 
         soup = BeautifulSoup(driver.page_source, 'html.parser')
         driver.close()

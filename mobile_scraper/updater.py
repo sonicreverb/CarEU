@@ -6,6 +6,7 @@ from main import BASE_DIR
 from mobile_scraper.scraper_main import get_htmlsoup, get_data
 from mobile_scraper.GoogleSheets.gsheets import read_column, write_column, get_last_row
 from mobile_scraper.links import read_mark_models
+from mobile_scraper.proxy.proxy_manager import PROXY_FILENAMES, set_proxy, remove_proxy
 
 HOST = "https://www.mobile.de"
 
@@ -38,8 +39,24 @@ def get_all_active_links():
         pass
 
     with open(os.path.join(BASE_DIR, "mobile_scraper", "data", "filtered_links.txt")) as fl_input:
+        iteration_counter = 0
+        proxy_id = 0
+        # переменная для удаления прокси в самом конце работы программы
+        last_used_proxy_id = 0
+
         for filtered_link in fl_input:
+            # если прокси уже было установлено, то есть это не первый запрос - удаляем его
+            if iteration_counter != 0:
+                remove_proxy(PROXY_FILENAMES[proxy_id])
+            set_proxy(PROXY_FILENAMES[proxy_id])
+            last_used_proxy_id = proxy_id
+
+            print(f'used proxy - {PROXY_FILENAMES[proxy_id - 1]}')
             get_product_links_from_page(filtered_link)
+            iteration_counter += 1
+
+        # избавляемся от прокси в конце выполнения парсинга
+        remove_proxy(last_used_proxy_id)
 
 
 def get_local_links():
@@ -412,11 +429,30 @@ def run_updater():
         os.remove(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt'))
 
     # непосредственно парсинг товаров и их запись в json
-    link_counter = 1
     print(upd_links, 'upd links')
+
+    link_counter = 1
+    proxy_id = 0
+    # переменная для удаления прокси в самом конце работы программы
+    last_used_proxy_id = 0
+
     for link in upd_links:
+        # смена прокси каждые 10 запросов
+        if (link_counter - 1) % 10 == 0:
+            # если прокси уже было установлено, то есть это не первый запрос - удаляем его
+            if link_counter != 1:
+                remove_proxy(PROXY_FILENAMES[proxy_id])
+            set_proxy(PROXY_FILENAMES[proxy_id])
+
+            last_used_proxy_id = proxy_id
+
+            # инкрементация proxy_id с учётом кол-ва прокси
+            if proxy_id + 1 != len(PROXY_FILENAMES):
+                proxy_id += 1
+            else:
+                proxy_id = 0
         try:
-            print(link_counter, link)
+            print(link_counter, link, f'used proxy - {PROXY_FILENAMES[proxy_id - 1]}',)
 
             if os.path.exists(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt')):
                 with open(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt')) as input_file:
@@ -435,6 +471,9 @@ def run_updater():
 
         except Exception as exc:
             print(exc)
+
+    # избавляемся от прокси в конце выполнения парсинга
+    remove_proxy(last_used_proxy_id)
 
     # загрузка товаров из json в таблицу
     upload_data_to_sheets()
