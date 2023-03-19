@@ -17,51 +17,54 @@ def get_models_links():
     upload_links = []
 
     for make in make_list:
-        if make.get_text() in ['───────────────', 'Не важно', 'Другие']:
-            continue
-        if make.get_text() == 'Abarth':
-            break
+        try:
+            if make.get_text() in ['───────────────', 'Не важно', 'Другие']:
+                continue
+            # if make.get_text() == 'Abarth':
+            #     break
 
-        car_make = make.get_text()
-        car_id = make.get('value')
-        driver = create_driver()
+            car_make = make.get_text()
+            car_id = make.get('value')
+            driver = create_driver()
 
-        driver.get(start_link_to_scratch)
-        time.sleep(3)
+            driver.get(start_link_to_scratch)
+            time.sleep(3)
 
-        driver.find_element('xpath', '//*[@id="mde-consent-modal-container"]/div[2]/div[2]/div[1]/button').click()
-        Select(driver.find_element('xpath', '//*[@id="makeModelVariant1Make"]')).select_by_value(car_id)
-        Select(driver.find_element('xpath', '//*[@id="minFirstRegistration"]')).select_by_value('2018')
-        driver.find_element('xpath', '/html/body/div[1]/div/section[2]/div[2]/div/div[1]/form/div[4]/div[2]/input')\
-            .click()
-        time.sleep(3)
+            driver.find_element('xpath', '//*[@id="mde-consent-modal-container"]/div[2]/div[2]/div[1]/button').click()
+            Select(driver.find_element('xpath', '//*[@id="makeModelVariant1Make"]')).select_by_value(car_id)
+            Select(driver.find_element('xpath', '//*[@id="minFirstRegistration"]')).select_by_value('2018')
+            driver.find_element('xpath', '/html/body/div[1]/div/section[2]/div[2]/div/div[1]/form/div[4]/div[2]/input')\
+                .click()
+            time.sleep(3)
 
-        base_source = driver.page_source
-        base_soup = BeautifulSoup(base_source, 'html.parser')
+            base_source = driver.page_source
+            base_soup = BeautifulSoup(base_source, 'html.parser')
 
-        model_list = base_soup.findAll('div', {'class': 'form-group'})[1]
-        models = model_list.findAll('option')
+            model_list = base_soup.findAll('div', {'class': 'form-group'})[1]
+            models = model_list.findAll('option')
 
-        models_names = []
-        models_id = []
+            models_names = []
+            models_id = []
 
-        for i in range(1, len(models)):
-            if models[i].text.strip() not in ['Другие', 'Не важно']:
-                models_names.append(models[i].text.strip())
-                try:
-                    models_id.append(models[i]['value'])
-                except Exception as exc:
-                    models_id.append('')
-                    print(exc, 'in links.py line 59')
+            for i in range(1, len(models)):
+                if models[i].text.strip() not in ['Другие', 'Не важно']:
+                    models_names.append(models[i].text.strip())
+                    try:
+                        models_id.append(models[i]['value'])
+                    except Exception as exc:
+                        models_id.append('')
+                        print(exc, 'in links.py line 59')
 
-        for value_index in range(len(models_id)):
-            model_link = "https://suchen.mobile.de/fahrzeuge/search.html?dam=0&isSearchRequest=true&ms=" + car_id + ";"\
-                         + models_id[value_index] + "&ref=quickSearch&sfmr=false&vc=Car"
+            for value_index in range(len(models_id)):
+                model_link = "https://suchen.mobile.de/fahrzeuge/search.html?dam=0&isSearchRequest=true&ms=" + \
+                             car_id + ";" + models_id[value_index] + "&ref=quickSearch&sfmr=false&vc=Car"
 
-            upload_make.append([car_make])
-            upload_model.append([models_names[value_index]])
-            upload_model_id.append([models_id[value_index]])
-            upload_links.append([model_link])
+                upload_make.append([car_make])
+                upload_model.append([models_names[value_index]])
+                upload_model_id.append([models_id[value_index]])
+                upload_links.append([model_link])
+        except Exception as exc:
+            print(exc)
 
     write_column(upload_make, 'models!A2:A')
     write_column(upload_model, 'models!B2:B')
@@ -82,23 +85,3 @@ def read_mark_models():
         makes_models_data[makes_li[indx]].append(models_li[indx])
 
     return makes_models_data
-
-# todo (captcha problem)
-
-# def get_link_for_one_make_model():
-#     make_li = read_column('A', 'models')
-#     model_li = read_column('B', 'models')
-#     # model_id_li = read_column('C', 'models')
-#     links_li = read_column('D', 'models')
-#
-#     upload_A_row = []
-#     upload_B_row = []
-#     upload_C_row = []
-#
-#     for line_num in range(len(make_li)):
-#         soup = get_htmlsoup(links_li[line_num])
-#
-#         time.sleep(5)
-#
-#
-# get_link_for_one_make_model()

@@ -1,5 +1,7 @@
 ﻿import json
 import os.path
+import time
+
 from main import BASE_DIR
 from mobile_scraper.scraper_main import get_htmlsoup, get_data
 from mobile_scraper.GoogleSheets.gsheets import read_column, write_column, get_last_row
@@ -163,197 +165,204 @@ def upload_data_to_sheets():
         all_models_dict = read_mark_models()
 
         for product in products:
-            upload_products_names.append([product['Title']])
+            if product:
+                upload_products_names.append([product['Title']])
 
-            # информация о марках и моделях
-            product_make = ' '
-            product_model = ' '
+                # информация о марках и моделях
+                product_make = ' '
+                product_model = ' '
 
-            for make in all_models_dict:
-                if make in product['Title']:
-                    product_make = make
-                    for model in all_models_dict[make]:
-                        if model in product['Title']:
-                            product_model = model
+                for make in all_models_dict:
+                    if make in product['Title']:
+                        product_make = make
+                        for model in all_models_dict[make]:
+                            if model in product['Title']:
+                                product_model = model
 
-            upload_products_makes.append([product_make])
-            upload_products_models.append([product_model])
+                upload_products_makes.append([product_make])
+                upload_products_models.append([product_model])
 
-            upload_products_urls.append([product['URL']])
-            upload_products_prices_brutto.append([int(product['BruttoPrice'])])
-            upload_products_prices_netto.append([int(product['NettoPrice'])])
-            upload_products_charachteristics.append([product['CharacteristicsStr']])
-            upload_products_descriptions.append([product['DescriptionStr']])
+                upload_products_urls.append([product['URL']])
+                upload_products_prices_brutto.append([int(product['BruttoPrice'])])
+                upload_products_prices_netto.append([int(product['NettoPrice'])])
+                upload_products_charachteristics.append([product['CharacteristicsStr']])
+                upload_products_descriptions.append([product['DescriptionStr']])
 
-            try:
-                upload_products_dealername.append([product['DealerData'][0]])
-                upload_products_dealersite.append([product['DealerData'][1]])
-                upload_products_dealerphonenumber.append([product['DealerData'][2]])
-            except Exception as exc:
-                print(exc)
-                upload_products_dealername.append([' '])
-                upload_products_dealersite.append([' '])
-                upload_products_dealerphonenumber.append([' '])
+                try:
+                    if product['DealerData'][0] != "Связаться с продавцом":
+                        upload_products_dealername.append([product['DealerData'][0]])
+                    else:
+                        upload_products_dealername.append([' '])
+                    if product['DealerData'][1] != "#contact-seller":
+                        upload_products_dealersite.append([product['DealerData'][1]])
+                    else:
+                        upload_products_dealersite.append([' '])
+                    upload_products_dealerphonenumber.append([product['DealerData'][2]])
+                except Exception as exc:
+                    print(exc)
+                    upload_products_dealername.append([' '])
+                    upload_products_dealersite.append([' '])
+                    upload_products_dealerphonenumber.append([' '])
 
-            # todo IMGLI
-            if len(product['ImgLi']) >= 1:
-                upload_products_img1.append([product['ImgLi'][0]])
-            else:
-                upload_products_img1.append([' '])
-            if len(product['ImgLi']) >= 2:
-                upload_products_img2.append([product['ImgLi'][1]])
-            else:
-                upload_products_img2.append([' '])
-            if len(product['ImgLi']) >= 3:
-                upload_products_img3.append([product['ImgLi'][2]])
-            else:
-                upload_products_img3.append([' '])
-            if len(product['ImgLi']) >= 4:
-                upload_products_img4.append([product['ImgLi'][3]])
-            else:
-                upload_products_img4.append([' '])
-            if len(product['ImgLi']) >= 5:
-                upload_products_img5.append([product['ImgLi'][4]])
-            else:
-                upload_products_img5.append([' '])
-            if len(product['ImgLi']) >= 6:
-                upload_products_img6.append([product['ImgLi'][5]])
-            else:
-                upload_products_img6.append([' '])
-            if len(product['ImgLi']) >= 7:
-                upload_products_img7.append([product['ImgLi'][6]])
-            else:
-                upload_products_img7.append([' '])
-            if len(product['ImgLi']) >= 8:
-                upload_products_img8.append([product['ImgLi'][7]])
-            else:
-                upload_products_img8.append([' '])
-            if len(product['ImgLi']) >= 9:
-                upload_products_img9.append([product['ImgLi'][8]])
-            else:
-                upload_products_img9.append([' '])
-            if len(product['ImgLi']) >= 10:
-                upload_products_img10.append([product['ImgLi'][9]])
-            else:
-                upload_products_img10.append([' '])
-            if len(product['ImgLi']) >= 11:
-                upload_products_img11.append([product['ImgLi'][10]])
-            else:
-                upload_products_img11.append([' '])
-            if len(product['ImgLi']) >= 12:
-                upload_products_img12.append([product['ImgLi'][11]])
-            else:
-                upload_products_img12.append([' '])
-            if len(product['ImgLi']) >= 13:
-                upload_products_img13.append([product['ImgLi'][12]])
-            else:
-                upload_products_img13.append([' '])
-            if len(product['ImgLi']) >= 14:
-                upload_products_img14.append([product['ImgLi'][13]])
-            else:
-                upload_products_img14.append([' '])
-            if len(product['ImgLi']) >= 15:
-                upload_products_img15.append([product['ImgLi'][14]])
-            else:
-                upload_products_img15.append([' '])
+                # todo IMGLI
+                if len(product['ImgLi']) >= 1:
+                    upload_products_img1.append([product['ImgLi'][0]])
+                else:
+                    upload_products_img1.append([' '])
+                if len(product['ImgLi']) >= 2:
+                    upload_products_img2.append([product['ImgLi'][1]])
+                else:
+                    upload_products_img2.append([' '])
+                if len(product['ImgLi']) >= 3:
+                    upload_products_img3.append([product['ImgLi'][2]])
+                else:
+                    upload_products_img3.append([' '])
+                if len(product['ImgLi']) >= 4:
+                    upload_products_img4.append([product['ImgLi'][3]])
+                else:
+                    upload_products_img4.append([' '])
+                if len(product['ImgLi']) >= 5:
+                    upload_products_img5.append([product['ImgLi'][4]])
+                else:
+                    upload_products_img5.append([' '])
+                if len(product['ImgLi']) >= 6:
+                    upload_products_img6.append([product['ImgLi'][5]])
+                else:
+                    upload_products_img6.append([' '])
+                if len(product['ImgLi']) >= 7:
+                    upload_products_img7.append([product['ImgLi'][6]])
+                else:
+                    upload_products_img7.append([' '])
+                if len(product['ImgLi']) >= 8:
+                    upload_products_img8.append([product['ImgLi'][7]])
+                else:
+                    upload_products_img8.append([' '])
+                if len(product['ImgLi']) >= 9:
+                    upload_products_img9.append([product['ImgLi'][8]])
+                else:
+                    upload_products_img9.append([' '])
+                if len(product['ImgLi']) >= 10:
+                    upload_products_img10.append([product['ImgLi'][9]])
+                else:
+                    upload_products_img10.append([' '])
+                if len(product['ImgLi']) >= 11:
+                    upload_products_img11.append([product['ImgLi'][10]])
+                else:
+                    upload_products_img11.append([' '])
+                if len(product['ImgLi']) >= 12:
+                    upload_products_img12.append([product['ImgLi'][11]])
+                else:
+                    upload_products_img12.append([' '])
+                if len(product['ImgLi']) >= 13:
+                    upload_products_img13.append([product['ImgLi'][12]])
+                else:
+                    upload_products_img13.append([' '])
+                if len(product['ImgLi']) >= 14:
+                    upload_products_img14.append([product['ImgLi'][13]])
+                else:
+                    upload_products_img14.append([' '])
+                if len(product['ImgLi']) >= 15:
+                    upload_products_img15.append([product['ImgLi'][14]])
+                else:
+                    upload_products_img15.append([' '])
 
-            # todo CATEGORIES
-            techopt = product['TechOptDict']
+                # todo CATEGORIES
+                techopt = product['TechOptDict']
 
-            if 'Категория' in techopt:
-                upload_products_category1.append([techopt['Категория']])
-            else:
-                upload_products_category1.append([''])
-            if 'Первая регистрация' in techopt:
-                upload_products_category2.append([techopt['Первая регистрация']])
-            else:
-                upload_products_category2.append([''])
-            if 'Коробка передач' in techopt:
-                upload_products_category3.append([techopt['Коробка передач']])
-            else:
-                upload_products_category3.append([''])
-            if 'Топливо' in techopt:
-                upload_products_category4.append([techopt['Топливо']])
-            else:
-                upload_products_category4.append([''])
-            if 'Пробег' in techopt:
-                upload_products_category5.append([techopt['Пробег']])
-            else:
-                upload_products_category5.append([''])
-            if 'Мощность' in techopt:
-                upload_products_category6.append([techopt['Мощность']])
-            else:
-                upload_products_category6.append([''])
-            if 'Объем двигателя' in techopt:
-                upload_products_category7.append([techopt['Объем двигателя']])
-            else:
-                upload_products_category7.append([''])
-            if 'Количество мест' in techopt:
-                upload_products_category8.append([techopt['Количество мест']])
-            else:
-                upload_products_category8.append([''])
-            if 'Число дверей' in techopt:
-                upload_products_category9.append([techopt['Число дверей']])
-            else:
-                upload_products_category9.append([''])
-            if 'Класс экологической безопасности' in techopt:
-                upload_products_category10.append([techopt['Класс экологической безопасности']])
-            else:
-                upload_products_category10.append([''])
-            if 'Количество владельцев транспортного средства' in techopt:
-                upload_products_category11.append([techopt['Количество владельцев транспортного средства']])
-            else:
-                upload_products_category11.append([''])
-            if 'Общий осмотр' in techopt:
-                upload_products_category12.append([techopt['Общий осмотр']])
-            else:
-                upload_products_category12.append([''])
-            if 'Цвет' in techopt:
-                upload_products_category13.append([techopt['Цвет']])
-            else:
-                upload_products_category13.append([''])
-            if 'Цвет по классификации производителя' in techopt:
-                upload_products_category14.append([techopt['Цвет по классификации производителя']])
-            else:
-                upload_products_category14.append([''])
-            if 'Состояние транспортного средства' in techopt:
-                upload_products_category15.append([techopt['Состояние транспортного средства']])
-            else:
-                upload_products_category15.append([''])
-            if 'Оригинал' in techopt:
-                upload_products_category16.append([techopt['Оригинал']])
-            else:
-                upload_products_category16.append([''])
-            if 'Потребление' in techopt:
-                upload_products_category17.append([techopt['Потребление']])
-            else:
-                upload_products_category17.append([''])
-            if 'CO₂ Emissions' in techopt:
-                upload_products_category18.append([techopt['CO₂ Emissions']])
-            else:
-                upload_products_category18.append([''])
-            if 'Датчики парковки' in techopt:
-                upload_products_category19.append([techopt['Датчики парковки']])
-            else:
-                upload_products_category19.append([''])
-            if 'Дизайн салона' in techopt:
-                upload_products_category20.append([techopt['Дизайн салона']])
-            else:
-                upload_products_category20.append([''])
-            if 'Номер транспортного средства' in techopt:
-                upload_products_category21.append([techopt['Номер транспортного средства']])
-            else:
-                upload_products_category21.append([''])
-            if 'Наличие' in techopt:
-                upload_products_category22.append([techopt['Наличие']])
-            else:
-                upload_products_category22.append([''])
-            if 'Вид основного топлива' in techopt:
-                upload_products_category23.append([techopt['Вид основного топлива']])
-            else:
-                upload_products_category23.append([''])
+                if 'Категория' in techopt:
+                    upload_products_category1.append([techopt['Категория']])
+                else:
+                    upload_products_category1.append([''])
+                if 'Первая регистрация' in techopt:
+                    upload_products_category2.append([techopt['Первая регистрация']])
+                else:
+                    upload_products_category2.append([''])
+                if 'Коробка передач' in techopt:
+                    upload_products_category3.append([techopt['Коробка передач']])
+                else:
+                    upload_products_category3.append([''])
+                if 'Топливо' in techopt:
+                    upload_products_category4.append([techopt['Топливо']])
+                else:
+                    upload_products_category4.append([''])
+                if 'Пробег' in techopt:
+                    upload_products_category5.append([techopt['Пробег']])
+                else:
+                    upload_products_category5.append([''])
+                if 'Мощность' in techopt:
+                    upload_products_category6.append([techopt['Мощность']])
+                else:
+                    upload_products_category6.append([''])
+                if 'Объем двигателя' in techopt:
+                    upload_products_category7.append([techopt['Объем двигателя']])
+                else:
+                    upload_products_category7.append([''])
+                if 'Количество мест' in techopt:
+                    upload_products_category8.append([techopt['Количество мест']])
+                else:
+                    upload_products_category8.append([''])
+                if 'Число дверей' in techopt:
+                    upload_products_category9.append([techopt['Число дверей']])
+                else:
+                    upload_products_category9.append([''])
+                if 'Класс экологической безопасности' in techopt:
+                    upload_products_category10.append([techopt['Класс экологической безопасности']])
+                else:
+                    upload_products_category10.append([''])
+                if 'Количество владельцев транспортного средства' in techopt:
+                    upload_products_category11.append([techopt['Количество владельцев транспортного средства']])
+                else:
+                    upload_products_category11.append([''])
+                if 'Общий осмотр' in techopt:
+                    upload_products_category12.append([techopt['Общий осмотр']])
+                else:
+                    upload_products_category12.append([''])
+                if 'Цвет' in techopt:
+                    upload_products_category13.append([techopt['Цвет']])
+                else:
+                    upload_products_category13.append([''])
+                if 'Цвет по классификации производителя' in techopt:
+                    upload_products_category14.append([techopt['Цвет по классификации производителя']])
+                else:
+                    upload_products_category14.append([''])
+                if 'Состояние транспортного средства' in techopt:
+                    upload_products_category15.append([techopt['Состояние транспортного средства']])
+                else:
+                    upload_products_category15.append([''])
+                if 'Оригинал' in techopt:
+                    upload_products_category16.append([techopt['Оригинал']])
+                else:
+                    upload_products_category16.append([''])
+                if 'Потребление' in techopt:
+                    upload_products_category17.append([techopt['Потребление']])
+                else:
+                    upload_products_category17.append([''])
+                if 'CO₂ Emissions' in techopt:
+                    upload_products_category18.append([techopt['CO₂ Emissions']])
+                else:
+                    upload_products_category18.append([''])
+                if 'Датчики парковки' in techopt:
+                    upload_products_category19.append([techopt['Датчики парковки']])
+                else:
+                    upload_products_category19.append([''])
+                if 'Дизайн салона' in techopt:
+                    upload_products_category20.append([techopt['Дизайн салона']])
+                else:
+                    upload_products_category20.append([''])
+                if 'Номер транспортного средства' in techopt:
+                    upload_products_category21.append([techopt['Номер транспортного средства']])
+                else:
+                    upload_products_category21.append([''])
+                if 'Наличие' in techopt:
+                    upload_products_category22.append([techopt['Наличие']])
+                else:
+                    upload_products_category22.append([''])
+                if 'Вид основного топлива' in techopt:
+                    upload_products_category23.append([techopt['Вид основного топлива']])
+                else:
+                    upload_products_category23.append([''])
 
-        # непосредственно запись в таблицу, каждый массив - столбец в таблице
+            # непосредственно запись в таблицу, каждый массив - столбец в таблице
 
         for row_index in range(len(upload_data)):
             # 26 - кол-во букв в англ. алфавите, 65 - константа для преобразований числового индекса через ascii
@@ -363,8 +372,12 @@ def upload_data_to_sheets():
             else:
                 row_name = 'A' + chr(row_index - 26 + 65)
 
+            # print(upload_data[row_index])
+
             writing_range = row_name + last_row + ':' + row_name
             write_column(upload_data[row_index], writing_range)
+            print(row_index)
+            time.sleep(5)
 
 
 def run_updater():

@@ -62,16 +62,3 @@ def auth_and_get_cookies():
     pickle.dump(driver.get_cookies(), open(os.path.join(BASE_DIR, 'mobile_scraper', 'authentication', 'cookies.pkl'),
                                            'wb'))
 
-
-def test_with_cookies():
-    driver = create_driver()
-    driver.get("https://www.mobile.de/")
-
-    time.sleep(5)
-
-    for cookie in pickle.load(open(os.path.join(BASE_DIR, 'mobile_scraper', 'authentication', 'cookies.pkl'), 'rb')):
-        driver.add_cookie(cookie)
-
-    time.sleep(5)
-    driver.refresh()
-    time.sleep(10)
