@@ -46,23 +46,23 @@ def get_all_active_links():
 
         for filtered_link in fl_input:
             # если прокси уже было установлено, то есть это не первый запрос - удаляем его
-            if iteration_counter != 0:
-                remove_proxy(PROXY_FILENAMES[proxy_id])
-            set_proxy(PROXY_FILENAMES[proxy_id])
-            last_used_proxy_id = proxy_id
+            # if iteration_counter != 0:
+            #     remove_proxy(PROXY_FILENAMES[proxy_id])
+            # set_proxy(PROXY_FILENAMES[proxy_id])
+            # last_used_proxy_id = proxy_id
 
-            print(f'used proxy - {PROXY_FILENAMES[proxy_id]}')
+            # print(f'used proxy - {PROXY_FILENAMES[proxy_id]}')
             get_product_links_from_page(filtered_link)
-            iteration_counter += 1
-
-            # инкрементация proxy_id с учётом кол-ва прокси
-            if proxy_id + 1 != len(PROXY_FILENAMES):
-                proxy_id += 1
-            else:
-                proxy_id = 0
+            # iteration_counter += 1
+            #
+            # # инкрементация proxy_id с учётом кол-ва прокси
+            # if proxy_id + 1 != len(PROXY_FILENAMES):
+            #     proxy_id += 1
+            # else:
+            #     proxy_id = 0
 
         # избавляемся от прокси в конце выполнения парсинга
-        remove_proxy(last_used_proxy_id)
+        # remove_proxy(last_used_proxy_id)
 
 
 def get_local_links():
@@ -428,7 +428,7 @@ def run_updater():
             activity_row.append(['Да'])
         else:
             activity_row.append(['Нет'])
-    write_column(activity_row, 'AV2:AV')
+    write_column(activity_row, 'AX2:AX')
 
     # очищаем товары, которые остались в json после прошлой сессии парсера
     if os.path.exists(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt')):
@@ -444,19 +444,19 @@ def run_updater():
 
     for link in upd_links:
         # смена прокси каждые 10 запросов
-        if (link_counter - 1) % 10 == 0:
-            # если прокси уже было установлено, то есть это не первый запрос - удаляем его
-            if link_counter != 1:
-                remove_proxy(PROXY_FILENAMES[proxy_id])
-            set_proxy(PROXY_FILENAMES[proxy_id])
-
-            last_used_proxy_id = proxy_id
-
-            # инкрементация proxy_id с учётом кол-ва прокси
-            if proxy_id + 1 != len(PROXY_FILENAMES):
-                proxy_id += 1
-            else:
-                proxy_id = 0
+        # if (link_counter - 1) % 10 == 0:
+        #     # если прокси уже было установлено, то есть это не первый запрос - удаляем его
+        #     if link_counter != 1:
+        #         remove_proxy(PROXY_FILENAMES[proxy_id])
+        #     set_proxy(PROXY_FILENAMES[proxy_id])
+        #
+        #     last_used_proxy_id = proxy_id
+        #
+        #     # инкрементация proxy_id с учётом кол-ва прокси
+        #     if proxy_id + 1 != len(PROXY_FILENAMES):
+        #         proxy_id += 1
+        #     else:
+        #         proxy_id = 0
         try:
             print(link_counter, link, f'used proxy - {PROXY_FILENAMES[proxy_id - 1]}',)
 
@@ -479,7 +479,7 @@ def run_updater():
             print(exc)
 
     # избавляемся от прокси в конце выполнения парсинга
-    remove_proxy(last_used_proxy_id)
+    # remove_proxy(last_used_proxy_id)
 
     # загрузка товаров из json в таблицу
     upload_data_to_sheets()
