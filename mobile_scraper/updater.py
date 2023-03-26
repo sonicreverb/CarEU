@@ -380,6 +380,9 @@ def upload_data_to_sheets():
 
 
 def update_products_activity():
+    # парсим ссылки на активные товары
+    get_all_active_links()
+
     # создаём множество ссылок на товары из таблицы
     local_links = get_local_links()
     local_set = set(link for link in local_links)
@@ -412,8 +415,20 @@ def run_updater():
     print(local_links[0:3])
     print("local set done")
 
+    # копируем active_links в active_links_to_parse (первый файл для обновления активности таблицы, второй для
+    # парсинга
+
+    src = os.path.join(BASE_DIR, "mobile_scraper", "data", "active_links.txt")
+    dest = os.path.join(BASE_DIR, "mobile_scraper", "data", "active_links_to_parse.txt")
+
+    with open(src, 'r') as f:
+        data = f.read()
+
+    with open(dest, 'w') as f:
+        f.write(data)
+
     # создаём множество актуальных ссылок на товары прямиком с mobile.de
-    with open(os.path.join(BASE_DIR, "mobile_scraper", "data", "active_links.txt"), "r") as inp:
+    with open(os.path.join(BASE_DIR, "mobile_scraper", "data", "active_links_to_parse.txt"), "r") as inp:
         active_li = []
         for line in inp:
             active_li.append(line.strip())
@@ -462,6 +477,11 @@ def run_updater():
             with open(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt'), 'w', encoding='utf-8') \
                     as output_file:
                 json.dump(data, output_file)
+
+            # каждую 500 товаров производится запись в таблицу, после чего products_json очищается, чтобы не повторятся
+            if link_counter % 500 == 0:
+                upload_data_to_sheets()
+                os.remove(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt'))
 
             link_counter += 1
 
