@@ -6,7 +6,7 @@ from main import BASE_DIR
 from mobile_scraper.scraper_main import get_htmlsoup, get_data
 from mobile_scraper.GoogleSheets.gsheets import read_column, write_column, get_last_row
 from mobile_scraper.links import read_mark_models
-from mobile_scraper.proxy.proxy_manager import PROXY_FILENAMES, set_proxy, remove_proxy
+from mobile_scraper.proxy.proxy_manager import PROXY_FILENAMES
 
 HOST = "https://www.mobile.de"
 
@@ -415,7 +415,7 @@ def run_updater():
     active_set = set(active_li)
     print("active set done")
 
-    # вычитаем множества и получаем ссылки, которые надо пометить неактивными в таблице, а также ссылки которые
+    # вычитаем множества и получаем ссылки, которые надо пометить неактивными в таблице +
     # необходимо спарсить и дозагрузить в таблице
     del_links = local_set - active_set
     upd_links = active_set - local_set
