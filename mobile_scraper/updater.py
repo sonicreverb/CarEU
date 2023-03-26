@@ -39,30 +39,9 @@ def get_all_active_links():
         pass
 
     with open(os.path.join(BASE_DIR, "mobile_scraper", "data", "filtered_links.txt")) as fl_input:
-        iteration_counter = 0
-        proxy_id = 0
-        # переменная для удаления прокси в самом конце работы программы
-        last_used_proxy_id = 0
 
         for filtered_link in fl_input:
-            # если прокси уже было установлено, то есть это не первый запрос - удаляем его
-            # if iteration_counter != 0:
-            #     remove_proxy(PROXY_FILENAMES[proxy_id])
-            # set_proxy(PROXY_FILENAMES[proxy_id])
-            # last_used_proxy_id = proxy_id
-
-            # print(f'used proxy - {PROXY_FILENAMES[proxy_id]}')
             get_product_links_from_page(filtered_link)
-            # iteration_counter += 1
-            #
-            # # инкрементация proxy_id с учётом кол-ва прокси
-            # if proxy_id + 1 != len(PROXY_FILENAMES):
-            #     proxy_id += 1
-            # else:
-            #     proxy_id = 0
-
-        # избавляемся от прокси в конце выполнения парсинга
-        # remove_proxy(last_used_proxy_id)
 
 
 def get_local_links():
@@ -395,9 +374,35 @@ def upload_data_to_sheets():
             else:
                 row_name = 'A' + chr(row_index - 26 + 65)
 
-        writing_range = row_name + last_row + ':' + row_name
-        write_column(upload_data[row_index], writing_range)
-        time.sleep(5)
+            writing_range = row_name + last_row + ':' + row_name
+            write_column(upload_data[row_index], writing_range)
+            time.sleep(5)
+
+
+def update_products_activity():
+    # создаём множество ссылок на товары из таблицы
+    local_links = get_local_links()
+    local_set = set(link for link in local_links)
+
+    # создаём множество актуальных ссылок на товары прямиком с mobile.de
+    with open(os.path.join(BASE_DIR, "mobile_scraper", "data", "active_links.txt"), "r") as inp:
+        active_li = []
+        for line in inp:
+            active_li.append(line.strip())
+    active_set = set(active_li)
+
+    # вычитаем множества и получаем ссылки, которые надо пометить неактивными в таблице +
+    # необходимо спарсить и дозагрузить в таблице
+    del_links = local_set - active_set
+
+    # отмечаем неактивные товары в таблице
+    activity_row = []
+    for link in local_links:
+        if link not in del_links:
+            activity_row.append(['Да'])
+        else:
+            activity_row.append(['Нет'])
+    write_column(activity_row, 'AX2:AX')
 
 
 def run_updater():
@@ -439,24 +444,9 @@ def run_updater():
 
     link_counter = 1
     proxy_id = 0
-    # переменная для удаления прокси в самом конце работы программы
-    last_used_proxy_id = 0
 
     for link in upd_links:
-        # смена прокси каждые 10 запросов
-        # if (link_counter - 1) % 10 == 0:
-        #     # если прокси уже было установлено, то есть это не первый запрос - удаляем его
-        #     if link_counter != 1:
-        #         remove_proxy(PROXY_FILENAMES[proxy_id])
-        #     set_proxy(PROXY_FILENAMES[proxy_id])
-        #
-        #     last_used_proxy_id = proxy_id
-        #
-        #     # инкрементация proxy_id с учётом кол-ва прокси
-        #     if proxy_id + 1 != len(PROXY_FILENAMES):
-        #         proxy_id += 1
-        #     else:
-        #         proxy_id = 0
+
         try:
             print(link_counter, link, f'used proxy - {PROXY_FILENAMES[proxy_id - 1]}',)
 
@@ -478,8 +468,4 @@ def run_updater():
         except Exception as exc:
             print(exc)
 
-    # избавляемся от прокси в конце выполнения парсинга
-    # remove_proxy(last_used_proxy_id)
-
-    # загрузка товаров из json в таблицу
     upload_data_to_sheets()

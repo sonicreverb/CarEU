@@ -3,3 +3,4 @@ webdriver_manager
 beautifulsoup4
 oauth2client
 google-api-python-client
+pyautogui
