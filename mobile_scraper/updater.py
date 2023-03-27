@@ -1,6 +1,7 @@
 ﻿import json
 import os.path
 import time
+import datetime
 
 from main import BASE_DIR
 from mobile_scraper.scraper_main import get_htmlsoup, get_data
@@ -379,35 +380,6 @@ def upload_data_to_sheets():
             time.sleep(5)
 
 
-def update_products_activity():
-    # парсим ссылки на активные товары
-    get_all_active_links()
-
-    # создаём множество ссылок на товары из таблицы
-    local_links = get_local_links()
-    local_set = set(link for link in local_links)
-
-    # создаём множество актуальных ссылок на товары прямиком с mobile.de
-    with open(os.path.join(BASE_DIR, "mobile_scraper", "data", "active_links.txt"), "r") as inp:
-        active_li = []
-        for line in inp:
-            active_li.append(line.strip())
-    active_set = set(active_li)
-
-    # вычитаем множества и получаем ссылки, которые надо пометить неактивными в таблице +
-    # необходимо спарсить и дозагрузить в таблице
-    del_links = local_set - active_set
-
-    # отмечаем неактивные товары в таблице
-    activity_row = []
-    for link in local_links:
-        if link not in del_links:
-            activity_row.append(['Да'])
-        else:
-            activity_row.append(['Нет'])
-    write_column(activity_row, 'AX2:AX')
-
-
 def run_updater():
     # создаём множество ссылок на товары из таблицы
     local_links = get_local_links()
@@ -415,20 +387,8 @@ def run_updater():
     print(local_links[0:3])
     print("local set done")
 
-    # копируем active_links в active_links_to_parse (первый файл для обновления активности таблицы, второй для
-    # парсинга
-
-    src = os.path.join(BASE_DIR, "mobile_scraper", "data", "active_links.txt")
-    dest = os.path.join(BASE_DIR, "mobile_scraper", "data", "active_links_to_parse.txt")
-
-    with open(src, 'r') as f:
-        data = f.read()
-
-    with open(dest, 'w') as f:
-        f.write(data)
-
     # создаём множество актуальных ссылок на товары прямиком с mobile.de
-    with open(os.path.join(BASE_DIR, "mobile_scraper", "data", "active_links_to_parse.txt"), "r") as inp:
+    with open(os.path.join(BASE_DIR, "mobile_scraper", "data", "active_links.txt"), "r") as inp:
         active_li = []
         for line in inp:
             active_li.append(line.strip())
@@ -479,9 +439,11 @@ def run_updater():
                 json.dump(data, output_file)
 
             # каждую 500 товаров производится запись в таблицу, после чего products_json очищается, чтобы не повторятся
-            if link_counter % 500 == 0:
+            if link_counter % 1000 == 0:
                 upload_data_to_sheets()
+                time.sleep(15)
                 os.remove(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt'))
+                print(f"Активность товаров успешно обновлена: {datetime.datetime.now()}")
 
             link_counter += 1
 
