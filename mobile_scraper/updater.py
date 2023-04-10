@@ -108,6 +108,8 @@ def upload_data_to_sheets():
         upload_products_category23 = []
         upload_products_category24 = []
 
+        unactive_since = []
+
         upload_data = [upload_products_names,
                        upload_products_makes,
                        upload_products_models,
@@ -159,7 +161,8 @@ def upload_data_to_sheets():
                        upload_products_category21,
                        upload_products_category22,
                        upload_products_category23,
-                       upload_products_category24, ]
+                       upload_products_category24,
+                       unactive_since]
 
         # переменная объявлена сейчас, чтобы далее в цикле каждый раз не вызывать get_last_row
         last_row = str(get_last_row('data') + 1)
@@ -364,6 +367,8 @@ def upload_data_to_sheets():
                     upload_products_category23.append([techopt['Вид основного топлива']])
                 else:
                     upload_products_category23.append([''])
+
+                unactive_since.append(['-'])
 
             # непосредственно запись в таблицу, каждый массив - столбец в таблице
 

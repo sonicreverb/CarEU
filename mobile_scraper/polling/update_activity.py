@@ -2,7 +2,7 @@ import os.path
 import datetime
 
 from main import BASE_DIR
-from mobile_scraper.GoogleSheets.gsheets import write_column
+from mobile_scraper.GoogleSheets.gsheets import write_column, read_column, delete_row
 from mobile_scraper.updater import get_local_links, HOST
 from mobile_scraper.scraper_main import get_htmlsoup
 
@@ -61,12 +61,43 @@ def update_products_activity():
 
     # отмечаем неактивные товары в таблице
     activity_row = []
+
+    # как только товар станет неактивным, нам нужно записать время в таблицу, чтобы через сутки удалить строку с товаром
+    unactive_since_row = []
+    unactive_since_column = read_column('AY', 'data')
+    unactive_since_arr_id = 0
+
     for link in local_links:
         if link not in del_links:
+            unactive_since_row.append(['-'])
             activity_row.append(['Да'])
         else:
             activity_row.append(['Нет'])
+            if unactive_since_column[unactive_since_arr_id] == '-':
+                unactive_since_row.append([datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
+            else:
+                unactive_since_row.append([unactive_since_column[unactive_since_arr_id]])
+        unactive_since_arr_id += 1
+
     write_column(activity_row, 'AX2:AX')
+    write_column(unactive_since_row, 'AY2:AY')
+
+    # модуль удаления неактивных товаров, которым уже больше суток
+    unactive_since_column = read_column('AY', 'data')
+
+    row_id = 2
+    for date_str in unactive_since_column:
+        if date_str != "-":
+            date_in_table = datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+            date_current = datetime.datetime.now()
+
+            delta = date_current - date_in_table
+            print(f'Строка {row_id}. Разница между датами: {delta}')
+
+            if delta.days > 1:
+                print(f'Индекс строки для удаления - {row_id}')
+                delete_row(row_id, 'data')
+        row_id += 1
 
 
 while True:

@@ -1,6 +1,7 @@
 import os
 from main import BASE_DIR
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from oauth2client.service_account import ServiceAccountCredentials
 
 spreadsheet_id = '13kWLMsatq8brJWiQRAaYKzxMgB4Ohh874ebtJOABvZo'
@@ -31,6 +32,41 @@ def write_column(data, wr_range):
         valueInputOption="RAW",
         body={'values': data}
     ).execute()
+
+
+# удаление строки
+def delete_row(row_index, sheet_name):
+    # указываем sheet_name
+    sheet_metadata = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+    sheet_id = None
+    for some_sheet in sheet_metadata.get('sheets', []):
+        if some_sheet.get('properties', {}).get('title', '') == sheet_name:
+            sheet_id = some_sheet.get('properties', {}).get('sheetId')
+            break
+
+    if not sheet_id:
+        print(f"Лист '{sheet_name}' не найден в таблице.")
+    else:
+        # создание запроса на удаление строк в указанном листе
+        delete_request = {
+            'deleteDimension': {
+                'range': {
+                    'sheetId': sheet_id,
+                    'dimension': 'ROWS',
+                    'startIndex': row_index,
+                    'endIndex': row_index + 1
+                }
+            }
+        }
+
+        # отправка запроса на удаление строк
+        try:
+            service.spreadsheets().batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={'requests': [delete_request]}
+            ).execute()
+        except HttpError as error:
+            print(f"Ошибка: {error}")
 
 
 def get_last_row(sheet_name):
