@@ -62,6 +62,23 @@ def update_products_activity():
     # отмечаем неактивные товары в таблице
     activity_row = []
 
+    # модуль удаления неактивных товаров, которым уже больше суток
+    unactive_since_column = read_column('AY', 'data')
+
+    row_id = 2
+    for date_str in unactive_since_column:
+        if date_str != "-":
+            date_in_table = datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+            date_current = datetime.datetime.now()
+
+            delta = date_current - date_in_table
+            print(f'Строка {row_id}. Разница между датами: {delta}')
+
+            if delta.days > 1:
+                print(f'Индекс строки для удаления - {row_id}')
+                delete_row(row_id, 'data')
+        row_id += 1
+
     # как только товар станет неактивным, нам нужно записать время в таблицу, чтобы через сутки удалить строку с товаром
     unactive_since_row = []
     unactive_since_column = read_column('AY', 'data')
@@ -81,23 +98,6 @@ def update_products_activity():
 
     write_column(activity_row, 'AX2:AX')
     write_column(unactive_since_row, 'AY2:AY')
-
-    # модуль удаления неактивных товаров, которым уже больше суток
-    unactive_since_column = read_column('AY', 'data')
-
-    row_id = 2
-    for date_str in unactive_since_column:
-        if date_str != "-":
-            date_in_table = datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
-            date_current = datetime.datetime.now()
-
-            delta = date_current - date_in_table
-            print(f'Строка {row_id}. Разница между датами: {delta}')
-
-            if delta.days > 1:
-                print(f'Индекс строки для удаления - {row_id}')
-                delete_row(row_id, 'data')
-        row_id += 1
 
 
 while True:

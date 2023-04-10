@@ -53,8 +53,8 @@ def delete_row(row_index, sheet_name):
                 'range': {
                     'sheetId': sheet_id,
                     'dimension': 'ROWS',
-                    'startIndex': row_index,
-                    'endIndex': row_index + 1
+                    'startIndex': row_index - 1,
+                    'endIndex': row_index
                 }
             }
         }
