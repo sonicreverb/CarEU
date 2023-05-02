@@ -1,13 +1,12 @@
-﻿import json
-import os.path
+﻿import os.path
 import time
-import datetime
 
+from selenium.webdriver.support.select import Select
+from bs4 import BeautifulSoup
 from main import BASE_DIR
-from mobile_scraper.scraper_main import get_htmlsoup, get_data
-from mobile_scraper.GoogleSheets.gsheets import read_column, write_column, get_last_row
-from mobile_scraper.links import read_mark_models
-from mobile_scraper.proxy.proxy_manager import PROXY_FILENAMES
+from mobile_scraper.scraper_main import get_htmlsoup, get_data, create_driver
+from mobile_scraper.database.database_main import write_productdata_to_db, get_local_links_from_db, \
+    edit_product_activity_in_db
 
 HOST = "https://www.mobile.de"
 
@@ -17,13 +16,13 @@ def get_product_links_from_page(url):
 
     # поиск и запись в массив всех ссылок на товары со страницы
     soup_a_li = soup.find_all('a', class_='vehicle-data track-event u-block js-track-event js-track-dealer-ratings')
-    with open(os.path.join(BASE_DIR, "mobile_scraper", "data", "active_links.txt"), "a") as al_output:
+    with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", "active_links.txt"), "a") as al_output:
         for link in soup_a_li:
             try:
                 al_output.write(HOST + link.get('href') + "\n")
             except Exception as exc:
                 print('error: links not found', exc)
-    print(len(soup_a_li), url)
+    print("[GET ACTIVE LINKS INFO]", len(soup_a_li), url)
 
     # переход на следующую страницу
     if soup.find('a', class_='pagination-nav pagination-nav-right btn btn--muted btn--s'):
@@ -36,364 +35,91 @@ def get_product_links_from_page(url):
 
 def get_all_active_links():
     # очистка содержимого active_links.txt
-    with open(os.path.join(BASE_DIR, "mobile_scraper", "data", "active_links.txt"), "w"):
+    with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", "active_links.txt"), "w"):
         pass
 
-    with open(os.path.join(BASE_DIR, "mobile_scraper", "data", "filtered_links.txt")) as fl_input:
-
+    with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", "filtered_links.txt")) as fl_input:
         for filtered_link in fl_input:
             get_product_links_from_page(filtered_link)
 
 
-def get_local_links():
-    return read_column('D', 'data')
+def get_models_dict():
+    start_link_to_scratch = 'https://www.mobile.de/ru/'
+    soup = get_htmlsoup(start_link_to_scratch)
+    make_list = soup.find_all('select', {'id': 'makeModelVariant1Make'})[0]
+    make_list = make_list.find_all('option')
+
+    upload_make = []
+    upload_model = []
+    upload_model_id = []
+    upload_links = []
+
+    for make in make_list:
+        try:
+            if make.get_text() in ['───────────────', 'Не важно', 'Другие']:
+                continue
+            # if make.get_text() == 'Abarth':
+            #     break
+
+            car_make = make.get_text()
+            car_id = make.get('value')
+            driver = create_driver()
+
+            driver.get(start_link_to_scratch)
+            time.sleep(3)
+
+            driver.find_element('xpath', '//*[@id="mde-consent-modal-container"]/div[2]/div[2]/div[1]/button').click()
+            Select(driver.find_element('xpath', '//*[@id="makeModelVariant1Make"]')).select_by_value(car_id)
+            Select(driver.find_element('xpath', '//*[@id="minFirstRegistration"]')).select_by_value('2018')
+            driver.find_element('xpath', '/html/body/div[1]/div/section[2]/div[2]/div/div[1]/form/div[4]/div[2]/input')\
+                .click()
+            time.sleep(3)
+
+            base_source = driver.page_source
+            base_soup = BeautifulSoup(base_source, 'html.parser')
+
+            model_list = base_soup.findAll('div', {'class': 'form-group'})[1]
+            models = model_list.findAll('option')
+
+            models_names = []
+            models_id = []
+
+            for i in range(1, len(models)):
+                if models[i].text.strip() not in ['Другие', 'Не важно']:
+                    models_names.append(models[i].text.strip())
+                    try:
+                        models_id.append(models[i]['value'])
+                    except Exception as exc:
+                        models_id.append('')
+                        print(exc, 'in links.py line 59')
+
+            for value_index in range(len(models_id)):
+                model_link = "https://suchen.mobile.de/fahrzeuge/search.html?dam=0&isSearchRequest=true&ms=" + \
+                             car_id + ";" + models_id[value_index] + "&ref=quickSearch&sfmr=false&vc=Car"
+
+                upload_make.append(car_make)
+                upload_model.append(models_names[value_index])
+                upload_model_id.append(models_id[value_index])
+                upload_links.append(model_link)
+        except Exception as exc:
+            print(exc)
+
+    return {"Producer": upload_make, "Models": upload_model, "ModelID": upload_model_id, "URL": upload_links}
 
 
-def upload_data_to_sheets():
-    with open(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt')) as input_file:
-        data = json.load(input_file)
-        products = data['products']
-
-        # каждый столбец, который будет записан - массив, думаю, что найдётся способ это оптимизировать, а пока todo
-        upload_products_names = []
-        upload_products_models = []
-        upload_products_makes = []
-        upload_products_urls = []
-        upload_products_prices_brutto = []
-        upload_products_prices_netto = []
-        upload_products_charachteristics = []
-        upload_products_descriptions = []
-        upload_products_dealername = []
-        upload_products_dealersite = []
-        upload_products_dealerphonenumber = []
-
-        upload_products_img1 = []
-        upload_products_img2 = []
-        upload_products_img3 = []
-        upload_products_img4 = []
-        upload_products_img5 = []
-        upload_products_img6 = []
-        upload_products_img7 = []
-        upload_products_img8 = []
-        upload_products_img9 = []
-        upload_products_img10 = []
-        upload_products_img11 = []
-        upload_products_img12 = []
-        upload_products_img13 = []
-        upload_products_img14 = []
-        upload_products_img15 = []
-
-        upload_products_category1 = []
-        upload_products_category2 = []
-        upload_products_category3 = []
-        upload_products_category4 = []
-        upload_products_category5 = []
-        upload_products_category6 = []
-        upload_products_category7 = []
-        upload_products_category8 = []
-        upload_products_category9 = []
-        upload_products_category10 = []
-        upload_products_category11 = []
-        upload_products_category12 = []
-        upload_products_category13 = []
-        upload_products_category14 = []
-        upload_products_category15 = []
-        upload_products_category16 = []
-        upload_products_category17 = []
-        upload_products_category18 = []
-        upload_products_category19 = []
-        upload_products_category20 = []
-        upload_products_category21 = []
-        upload_products_category22 = []
-        upload_products_category23 = []
-        upload_products_category24 = []
-
-        unactive_since = []
-
-        upload_data = [upload_products_names,
-                       upload_products_makes,
-                       upload_products_models,
-                       upload_products_urls,
-                       upload_products_prices_brutto,
-                       upload_products_prices_netto,
-                       upload_products_charachteristics,
-                       upload_products_descriptions,
-                       upload_products_dealername,
-                       upload_products_dealersite,
-                       upload_products_dealerphonenumber,
-
-                       upload_products_img1,
-                       upload_products_img2,
-                       upload_products_img3,
-                       upload_products_img4,
-                       upload_products_img5,
-                       upload_products_img6,
-                       upload_products_img7,
-                       upload_products_img8,
-                       upload_products_img9,
-                       upload_products_img10,
-                       upload_products_img11,
-                       upload_products_img12,
-                       upload_products_img13,
-                       upload_products_img14,
-                       upload_products_img15,
-
-                       upload_products_category1,
-                       upload_products_category2,
-                       upload_products_category3,
-                       upload_products_category4,
-                       upload_products_category5,
-                       upload_products_category6,
-                       upload_products_category7,
-                       upload_products_category8,
-                       upload_products_category9,
-                       upload_products_category10,
-                       upload_products_category11,
-                       upload_products_category12,
-                       upload_products_category13,
-                       upload_products_category14,
-                       upload_products_category15,
-                       upload_products_category16,
-                       upload_products_category17,
-                       upload_products_category18,
-                       upload_products_category19,
-                       upload_products_category20,
-                       upload_products_category21,
-                       upload_products_category22,
-                       upload_products_category23,
-                       upload_products_category24,
-                       unactive_since]
-
-        # переменная объявлена сейчас, чтобы далее в цикле каждый раз не вызывать get_last_row
-        last_row = str(get_last_row('data') + 1)
-
-        # словарь моделей имеющихся марок
-        all_models_dict = read_mark_models()
-
-        for product in products:
-            if product:
-                upload_products_names.append([product['Title']])
-
-                # информация о марках и моделях
-                product_make = ' '
-                product_model = ' '
-
-                for make in all_models_dict:
-                    if make in product['Title']:
-                        product_make = make
-                        for model in all_models_dict[make]:
-                            if model in product['Title']:
-                                product_model = model
-
-                upload_products_makes.append([product_make])
-                upload_products_models.append([product_model])
-
-                upload_products_urls.append([product['URL']])
-                upload_products_prices_brutto.append([int(product['BruttoPrice'])])
-                upload_products_prices_netto.append([int(product['NettoPrice'])])
-                upload_products_charachteristics.append([product['CharacteristicsStr']])
-                upload_products_descriptions.append([product['DescriptionStr']])
-
-                try:
-                    if product['DealerData'][0] != "Связаться с продавцом":
-                        upload_products_dealername.append([product['DealerData'][0]])
-                    else:
-                        upload_products_dealername.append([' '])
-                    if product['DealerData'][1] != "#contact-seller":
-                        upload_products_dealersite.append([product['DealerData'][1]])
-                    else:
-                        upload_products_dealersite.append([' '])
-                    upload_products_dealerphonenumber.append([product['DealerData'][2]])
-                except Exception as exc:
-                    print(exc)
-                    upload_products_dealername.append([' '])
-                    upload_products_dealersite.append([' '])
-                    upload_products_dealerphonenumber.append([' '])
-
-                # todo IMGLI
-                if len(product['ImgLi']) >= 1:
-                    upload_products_img1.append([product['ImgLi'][0]])
-                else:
-                    upload_products_img1.append([' '])
-                if len(product['ImgLi']) >= 2:
-                    upload_products_img2.append([product['ImgLi'][1]])
-                else:
-                    upload_products_img2.append([' '])
-                if len(product['ImgLi']) >= 3:
-                    upload_products_img3.append([product['ImgLi'][2]])
-                else:
-                    upload_products_img3.append([' '])
-                if len(product['ImgLi']) >= 4:
-                    upload_products_img4.append([product['ImgLi'][3]])
-                else:
-                    upload_products_img4.append([' '])
-                if len(product['ImgLi']) >= 5:
-                    upload_products_img5.append([product['ImgLi'][4]])
-                else:
-                    upload_products_img5.append([' '])
-                if len(product['ImgLi']) >= 6:
-                    upload_products_img6.append([product['ImgLi'][5]])
-                else:
-                    upload_products_img6.append([' '])
-                if len(product['ImgLi']) >= 7:
-                    upload_products_img7.append([product['ImgLi'][6]])
-                else:
-                    upload_products_img7.append([' '])
-                if len(product['ImgLi']) >= 8:
-                    upload_products_img8.append([product['ImgLi'][7]])
-                else:
-                    upload_products_img8.append([' '])
-                if len(product['ImgLi']) >= 9:
-                    upload_products_img9.append([product['ImgLi'][8]])
-                else:
-                    upload_products_img9.append([' '])
-                if len(product['ImgLi']) >= 10:
-                    upload_products_img10.append([product['ImgLi'][9]])
-                else:
-                    upload_products_img10.append([' '])
-                if len(product['ImgLi']) >= 11:
-                    upload_products_img11.append([product['ImgLi'][10]])
-                else:
-                    upload_products_img11.append([' '])
-                if len(product['ImgLi']) >= 12:
-                    upload_products_img12.append([product['ImgLi'][11]])
-                else:
-                    upload_products_img12.append([' '])
-                if len(product['ImgLi']) >= 13:
-                    upload_products_img13.append([product['ImgLi'][12]])
-                else:
-                    upload_products_img13.append([' '])
-                if len(product['ImgLi']) >= 14:
-                    upload_products_img14.append([product['ImgLi'][13]])
-                else:
-                    upload_products_img14.append([' '])
-                if len(product['ImgLi']) >= 15:
-                    upload_products_img15.append([product['ImgLi'][14]])
-                else:
-                    upload_products_img15.append([' '])
-
-                # todo CATEGORIES
-                techopt = product['TechOptDict']
-
-                if 'Категория' in techopt:
-                    upload_products_category1.append([techopt['Категория']])
-                else:
-                    upload_products_category1.append([''])
-                if 'Первая регистрация' in techopt:
-                    upload_products_category2.append([techopt['Первая регистрация']])
-                else:
-                    upload_products_category2.append([''])
-                if 'Коробка передач' in techopt:
-                    upload_products_category3.append([techopt['Коробка передач']])
-                else:
-                    upload_products_category3.append([''])
-                if 'Топливо' in techopt:
-                    upload_products_category4.append([techopt['Топливо']])
-                else:
-                    upload_products_category4.append([''])
-                if 'Пробег' in techopt:
-                    upload_products_category5.append([techopt['Пробег']])
-                else:
-                    upload_products_category5.append([''])
-                if 'Мощность' in techopt:
-                    upload_products_category6.append([techopt['Мощность']])
-                else:
-                    upload_products_category6.append([''])
-                if 'Объем двигателя' in techopt:
-                    upload_products_category7.append([techopt['Объем двигателя']])
-                else:
-                    upload_products_category7.append([''])
-                if 'Количество мест' in techopt:
-                    upload_products_category8.append([techopt['Количество мест']])
-                else:
-                    upload_products_category8.append([''])
-                if 'Число дверей' in techopt:
-                    upload_products_category9.append([techopt['Число дверей']])
-                else:
-                    upload_products_category9.append([''])
-                if 'Класс экологической безопасности' in techopt:
-                    upload_products_category10.append([techopt['Класс экологической безопасности']])
-                else:
-                    upload_products_category10.append([''])
-                if 'Количество владельцев транспортного средства' in techopt:
-                    upload_products_category11.append([techopt['Количество владельцев транспортного средства']])
-                else:
-                    upload_products_category11.append([''])
-                if 'Общий осмотр' in techopt:
-                    upload_products_category12.append([techopt['Общий осмотр']])
-                else:
-                    upload_products_category12.append([''])
-                if 'Цвет' in techopt:
-                    upload_products_category13.append([techopt['Цвет']])
-                else:
-                    upload_products_category13.append([''])
-                if 'Цвет по классификации производителя' in techopt:
-                    upload_products_category14.append([techopt['Цвет по классификации производителя']])
-                else:
-                    upload_products_category14.append([''])
-                if 'Состояние транспортного средства' in techopt:
-                    upload_products_category15.append([techopt['Состояние транспортного средства']])
-                else:
-                    upload_products_category15.append([''])
-                if 'Оригинал' in techopt:
-                    upload_products_category16.append([techopt['Оригинал']])
-                else:
-                    upload_products_category16.append([''])
-                if 'Потребление' in techopt:
-                    upload_products_category17.append([techopt['Потребление']])
-                else:
-                    upload_products_category17.append([''])
-                if 'CO₂ Emissions' in techopt:
-                    upload_products_category18.append([techopt['CO₂ Emissions']])
-                else:
-                    upload_products_category18.append([''])
-                if 'Датчики парковки' in techopt:
-                    upload_products_category19.append([techopt['Датчики парковки']])
-                else:
-                    upload_products_category19.append([''])
-                if 'Дизайн салона' in techopt:
-                    upload_products_category20.append([techopt['Дизайн салона']])
-                else:
-                    upload_products_category20.append([''])
-                if 'Номер транспортного средства' in techopt:
-                    upload_products_category21.append([techopt['Номер транспортного средства']])
-                else:
-                    upload_products_category21.append([''])
-                if 'Наличие' in techopt:
-                    upload_products_category22.append([techopt['Наличие']])
-                else:
-                    upload_products_category22.append([''])
-                if 'Вид основного топлива' in techopt:
-                    upload_products_category23.append([techopt['Вид основного топлива']])
-                else:
-                    upload_products_category23.append([''])
-
-                unactive_since.append(['-'])
-
-            # непосредственно запись в таблицу, каждый массив - столбец в таблице
-
-        for row_index in range(len(upload_data)):
-            # 26 - кол-во букв в англ. алфавите, 65 - константа для преобразований числового индекса через ascii
-            # в название столбца
-            if row_index < 26:
-                row_name = chr(row_index + 65)
-            else:
-                row_name = 'A' + chr(row_index - 26 + 65)
-
-            writing_range = row_name + last_row + ':' + row_name
-            write_column(upload_data[row_index], writing_range)
-            time.sleep(5)
-
-
-def run_updater():
+def update_products_activity():
     # создаём множество ссылок на товары из таблицы
-    local_links = get_local_links()
-    local_set = set(link for link in local_links)
-    print(local_links[0:3])
-    print("local set done")
+    local_links = get_local_links_from_db()
+    if local_links:
+        local_set = set(link for link in local_links)
+        print(local_links[0:3])
+        print("local set done")
+    else:
+        local_set = set()
+        print("null local set done")
 
     # создаём множество актуальных ссылок на товары прямиком с mobile.de
-    with open(os.path.join(BASE_DIR, "mobile_scraper", "data", "active_links.txt"), "r") as inp:
+    with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", "active_links.txt"), "r") as inp:
         active_li = []
         for line in inp:
             active_li.append(line.strip())
@@ -407,52 +133,24 @@ def run_updater():
     print('total upd links: ', len(upd_links))
 
     # отмечаем неактивные товары в таблице
-    activity_row = []
     for link in local_links:
-        if link not in del_links:
-            activity_row.append(['Да'])
-        else:
-            activity_row.append(['Нет'])
-    write_column(activity_row, 'AX2:AX')
+        if link in del_links:
+            edit_product_activity_in_db(local_links)
 
-    # очищаем товары, которые остались в json после прошлой сессии парсера
-    if os.path.exists(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt')):
-        os.remove(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt'))
+    return upd_links
 
-    # непосредственно парсинг товаров и их запись в json
-    print(upd_links, 'upd links')
 
-    link_counter = 1
-    proxy_id = 0
+def run_updater():
+    # получаем ссылки для парсинга
+    upd_links = update_products_activity()
+
+    # непосредственно парсинг товаров
+    product_counter = 1
 
     for link in upd_links:
-
         try:
-            print(link_counter, link, f'used proxy - {PROXY_FILENAMES[proxy_id - 1]}',)
-
-            if os.path.exists(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt')):
-                with open(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt')) as input_file:
-                    data = json.load(input_file)
-            else:
-                data = {'products': []}
-
-            product_data = get_data(link.strip())
-            data['products'].append(product_data)
-
-            with open(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt'), 'w', encoding='utf-8') \
-                    as output_file:
-                json.dump(data, output_file)
-
-            # каждую 500 товаров производится запись в таблицу, после чего products_json очищается, чтобы не повторятся
-            if link_counter % 1000 == 0:
-                upload_data_to_sheets()
-                time.sleep(15)
-                os.remove(os.path.join(BASE_DIR, 'mobile_scraper', 'data', 'products_json.txt'))
-                print(f"Активность товаров успешно обновлена: {datetime.datetime.now()}")
-
-            link_counter += 1
-
+            print(f"[UPDATER INFO] {product_counter}: {link}")
+            product_data = get_data(link)
+            write_productdata_to_db(product_data)
         except Exception as exc:
             print(exc)
-
-    upload_data_to_sheets()
