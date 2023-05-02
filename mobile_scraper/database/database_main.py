@@ -331,13 +331,16 @@ def edit_product_activity_in_db(local_link):
                 # отметка товара неактивным в БД
                 cursor.execute(
                     "UPDATE vehicles_data SET activity = false WHERE source_url = "
-                    f"'{local_link}';"
+                    f"'{ascii(local_link)[1:-1]}';"
                 )
                 # установка даты, с которой товар стал неактивен в БД
                 cursor.execute(
-                        "DELETE FROM vehicles_data WHERE unactive_since <= NOW() - INTERVAL '1 day';"
+                    "UPDATE vehicles_data SET unactive_since = NOW() WHERE activity = false AND unactive_since is NULL;"
                 )
-
+                # удаление товаров по истечению одного дня после отметки их неактивными
+                cursor.execute(
+                    "DELETE FROM vehicles_data WHERE unactive_since <= NOW() - INTERVAL '1 day';"
+                )
             else:
                 print(f"[PostGreSQL INFO] Error while trying to read {table_name}. {table_name} doesn't exist.")
                 connection.close()

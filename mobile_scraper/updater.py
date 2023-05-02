@@ -11,12 +11,17 @@ from mobile_scraper.database.database_main import write_productdata_to_db, get_l
 HOST = "https://www.mobile.de"
 
 
-def get_product_links_from_page(url):
+def get_product_links_from_page(url, flag_upd_activity=False):
     soup = get_htmlsoup(url)
+
+    if flag_upd_activity:
+        txt_name = "upd_activity.txt"
+    else:
+        txt_name = "active_links.txt"
 
     # поиск и запись в массив всех ссылок на товары со страницы
     soup_a_li = soup.find_all('a', class_='vehicle-data track-event u-block js-track-event js-track-dealer-ratings')
-    with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", "active_links.txt"), "a") as al_output:
+    with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", txt_name), "a") as al_output:
         for link in soup_a_li:
             try:
                 al_output.write(HOST + link.get('href') + "\n")
@@ -33,14 +38,22 @@ def get_product_links_from_page(url):
             print('warning: next page link not found', exc)
 
 
-def get_all_active_links():
+def get_all_active_links(flag_upd_activity=False):
+    if flag_upd_activity:
+        txt_name = "upd_activity.txt"
+    else:
+        txt_name = "active_links.txt"
+
     # очистка содержимого active_links.txt
-    with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", "active_links.txt"), "w"):
+    with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", txt_name), "w"):
         pass
 
     with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", "filtered_links.txt")) as fl_input:
         for filtered_link in fl_input:
-            get_product_links_from_page(filtered_link)
+            if flag_upd_activity:
+                get_product_links_from_page(filtered_link, True)
+            else:
+                get_product_links_from_page(filtered_link)
 
 
 def get_models_dict():
@@ -107,7 +120,12 @@ def get_models_dict():
     return {"Producer": upload_make, "Models": upload_model, "ModelID": upload_model_id, "URL": upload_links}
 
 
-def update_products_activity():
+def update_products_activity(flag_upd_activity=False):
+    if flag_upd_activity:
+        txt_name = "upd_activity.txt"
+    else:
+        txt_name = "active_links.txt"
+
     # создаём множество ссылок на товары из таблицы
     local_links = get_local_links_from_db()
     if local_links:
@@ -119,7 +137,7 @@ def update_products_activity():
         print("null local set done")
 
     # создаём множество актуальных ссылок на товары прямиком с mobile.de
-    with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", "active_links.txt"), "r") as inp:
+    with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", txt_name), "r") as inp:
         active_li = []
         for line in inp:
             active_li.append(line.strip())
@@ -135,7 +153,7 @@ def update_products_activity():
     # отмечаем неактивные товары в таблице
     for link in local_links:
         if link in del_links:
-            edit_product_activity_in_db(local_links)
+            edit_product_activity_in_db(link)
 
     return upd_links
 
