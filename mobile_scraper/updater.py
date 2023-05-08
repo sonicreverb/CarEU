@@ -167,8 +167,9 @@ def run_updater():
 
     for link in upd_links:
         try:
-            print(f"[UPDATER INFO] {product_counter}: {link}")
+            print(f"\n[UPDATER INFO] {product_counter}: {link}")
             product_data = get_data(link)
             write_productdata_to_db(product_data)
+            product_counter += 1
         except Exception as exc:
             print(exc)

@@ -2,6 +2,7 @@ from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
 from bs4 import BeautifulSoup
+from googletrans import Translator
 
 
 def create_driver():
@@ -77,6 +78,8 @@ def get_data(url):
                 description_str += li.get_text() + '\n'
             description_str += '\n'
 
+    description_translated = Translator().translate(text=description_str.strip(), src='de', dest='ru').text
+
     dealer_name = soup.find('div', class_='vip-box seller-box cBox cBox--content hidden-s u-clearfix'). \
         find('a', {'data-google-interstitial': 'false'}).get_text()
 
@@ -87,6 +90,7 @@ def get_data(url):
 
     product_data = {'Title': title, 'URL': url, 'BruttoPrice': brutto_price, 'NettoPrice': netto_price, 'ImgLi': img_li,
                     'TechOptDict': TO_dict, 'CharacteristicsStr': characteristics,
-                    'DescriptionStr': description_str.strip(), 'DealerData': [dealer_name, dealer_link, dealer_phone]}
+                    'DescriptionStr': description_str.strip(), 'DescriptionTRD': description_translated,
+                    'DealerData': [dealer_name, dealer_link, dealer_phone]}
 
     return product_data
