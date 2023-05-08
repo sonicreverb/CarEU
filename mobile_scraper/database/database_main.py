@@ -228,7 +228,7 @@ def write_productdata_to_db(product_data):
                 if make in product_data['Title']:
                     product_make = make
                     for model in all_models_dict[make]:
-                        if model in product_data['Title']:
+                        if model.lowercase() in product_data['Title'].lowercase():
                             product_model = model
 
             # ПОБОЧКА
@@ -578,6 +578,3 @@ def update_final_prices():
         print("[PostGreSQL INFO] Connection closed.")
     else:
         print("[PostGreSQL INFO] Error, couldn't get connection...")
-
-
-update_final_prices()
