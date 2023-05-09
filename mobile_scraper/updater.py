@@ -1,12 +1,13 @@
 ﻿import os.path
 import time
+import ftplib
 
 from selenium.webdriver.support.select import Select
 from bs4 import BeautifulSoup
 from main import BASE_DIR
 from mobile_scraper.scraper_main import get_htmlsoup, get_data, create_driver
 from mobile_scraper.database.database_main import write_productdata_to_db, get_local_links_from_db, \
-    edit_product_activity_in_db
+    edit_product_activity_in_db, write_data_to_xlsx
 
 HOST = "https://www.mobile.de"
 
@@ -158,18 +159,37 @@ def update_products_activity(flag_upd_activity=False):
     return upd_links
 
 
+# загрузка данных из БД на ftp
+def upload_updtable_to_ftp():
+    ftp_server = 'careu.ru'
+    ftp_username = 'pikprice_123'
+    ftp_password = 'u6M&k9J4'
+    remote_file_path = 'output.xlsx'
+    local_file_path = os.path.join(BASE_DIR, 'mobile_scraper', 'database', 'output.xlsx')
+
+    # подключение к FTP серверу
+    with ftplib.FTP(ftp_server, ftp_username, ftp_password) as ftp:
+        # открытие файла для чтения
+        with open(local_file_path, 'rb') as file:
+            # загрузка файла на сервер
+            ftp.storbinary(f'STOR {remote_file_path}', file)
+
+
 def run_updater():
     # получаем ссылки для парсинга
     upd_links = update_products_activity()
-
-    # непосредственно парсинг товаров
     product_counter = 1
 
     for link in upd_links:
         try:
+            # непосредственно парсинг товаров
             print(f"\n[UPDATER INFO] {product_counter}: {link}")
             product_data = get_data(link)
             write_productdata_to_db(product_data)
             product_counter += 1
         except Exception as exc:
             print(exc)
+
+    # отправка данных на FTP сервер
+    write_data_to_xlsx()
+    upload_updtable_to_ftp()

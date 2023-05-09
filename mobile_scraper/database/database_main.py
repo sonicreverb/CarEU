@@ -1,6 +1,11 @@
 import psycopg2
 import requests
 import re
+import openpyxl
+from openpyxl.utils import get_column_letter
+
+import os.path as osph
+from main import BASE_DIR
 from mobile_scraper.database.config import host, user, password, db_name
 
 
@@ -225,7 +230,7 @@ def write_productdata_to_db(product_data):
                 if make in product_data['Title']:
                     product_make = make
                     for model in all_models_dict[make]:
-                        if model.lowercase() in product_data['Title'].lowercase():
+                        if model in product_data['Title']:
                             product_model = model
 
             # ПОБОЧКА
@@ -521,6 +526,7 @@ def update_tcalc():
         print("[PostGreSQL INFO] Error, couldn't get connection...")
 
 
+# обновление цен в таблице
 def update_final_prices():
     # получаем соединение
     connection = get_connection_to_db()
@@ -573,5 +579,46 @@ def update_final_prices():
         connection.close()
         print('[PostGreSQL INFO] vehicles_data UPDATE COMPLETE.')
         print("[PostGreSQL INFO] Connection closed.")
+    else:
+        print("[PostGreSQL INFO] Error, couldn't get connection...")
+
+
+# запись данных из БД в csv файл
+def write_data_to_xlsx():
+    # получаем соединение
+    connection = get_connection_to_db()
+
+    # если соединение установлено успешно
+    if connection:
+        with connection.cursor() as cursor:
+            # SQL запрос
+            cursor.execute("SELECT * FROM vehicles_data;")
+            rows = cursor.fetchall()
+
+            # создание XLSX-файла
+            workbook = openpyxl.Workbook()
+            worksheet = workbook.active
+
+            # Запись заголовков столбцов
+            columns = [i[0] for i in cursor.description]
+            for column_index, column_name in enumerate(columns, start=1):
+                column_letter = get_column_letter(column_index)
+                worksheet[f"{column_letter}1"] = column_name
+
+            # запись данных
+            for row_index, row in enumerate(rows, start=2):
+                for column_index, cell_value in enumerate(row):
+                    column_letter = get_column_letter(column_index + 1)
+                    worksheet[f"{column_letter}{row_index}"] = cell_value
+
+            # сохранение файла
+            filename = osph.join(BASE_DIR, 'mobile_scraper', 'database', 'output.xlsx')
+            workbook.save(filename)
+
+        connection.commit()
+        # прикрываем соединение
+        connection.close()
+        print("[PostGreSQL INFO] Connection closed.")
+        print("[XLSX FILE] XLSX file was updated successfully.")
     else:
         print("[PostGreSQL INFO] Error, couldn't get connection...")
