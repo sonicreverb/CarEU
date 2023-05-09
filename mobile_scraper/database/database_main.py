@@ -44,15 +44,12 @@ def update_models_table_to_db(models_data):
                 cursor.execute(f"CREATE TABLE {table_name}(id serial PRIMARY KEY, producer varchar(255) NOT NULL,"
                                f"model varchar(255) NOT NULL, model_id int, url varchar(511));")
 
-            # запись в БД с кодировкой в ascii
+            # запись в БД
             for tmp in range(len(models_data["Producer"])):
-                # кодировка в ASCII для последующей записи в таблице
-                producer = ascii(models_data['Producer'][tmp])[1:-1]
-                model = ascii(models_data['Models'][tmp])[1:-1]
-                model_id = ascii(models_data['ModelID'][tmp])[1:-1]
-                url = ascii(models_data['URL'][tmp])[1:-1]
-
-                # print((producer, model, model_id, url))
+                producer = models_data['Producer'][tmp]
+                model = models_data['Models'][tmp]
+                model_id = models_data['ModelID'][tmp]
+                url = models_data['URL'][tmp]
 
                 # SQL запрос
                 query = "INSERT INTO vehicles_models (producer, model, model_id, url) VALUES (%s, %s, %s, %s)"
@@ -207,7 +204,7 @@ def write_productdata_to_db(product_data):
     # получаем соединение
     connection = get_connection_to_db()
 
-    # запись в БД с кодировкой в ascii
+    # запись в БД
     # если соединение установлено успешно
     if connection:
         with connection.cursor() as cursor:
@@ -400,7 +397,7 @@ def edit_product_activity_in_db(local_link):
                 # отметка товара неактивным в БД
                 cursor.execute(
                     "UPDATE vehicles_data SET activity = false WHERE source_url = "
-                    f"'{ascii(local_link)[1:-1]}';"
+                    f"'{local_link}';"
                 )
                 # установка даты, с которой товар стал неактивен в БД
                 cursor.execute(
@@ -452,7 +449,7 @@ def create_tcalc():
                 # получаем текущий курс евро
                 euro_rate = get_euro_rate()
 
-                # запись в БД с кодировкой в ascii
+                # запись в БД с кодировкой
                 for vol in range(500, 8200 + 1):
                     if vol < 1000:
                         rate = 1.5
