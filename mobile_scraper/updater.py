@@ -177,9 +177,8 @@ def upload_updtable_to_ftp():
 
 def run_updater():
     # получаем ссылки для парсинга
-    # upd_links = update_products_activity()
+    upd_links = update_products_activity()
 
-    upd_links = ['https://www.mobile.de/ru/%D0%90%D0%B2%D1%82%D0%BE%D0%BC%D0%BE%D0%B1%D0%B8%D0%BB%D1%8C/Mercedes-Benz-C-200-T-d-Avantgarde-COMAND-T/vhc:car,pgn:1,pgs:50,srt:price,sro:asc,ms1:1900__,ms2:3500__,ms3:17200__,frn:2018,frx:2020,prn:20000,prx:60000,slt:dealer,mlx:150000,doc:14,dmg:false,vat:1/pg:vipcar/366115209.html']
     product_counter = 1
 
     for link in upd_links:
@@ -189,9 +188,13 @@ def run_updater():
             product_data = get_data(link)
             write_productdata_to_db(product_data)
             product_counter += 1
+
+            # отправка данных на FTP сервер каждую тысячу товаров
+            if product_counter % 1000 == 0:
+                write_data_to_xlsx()
+                upload_updtable_to_ftp()
+
         except Exception as exc:
             print(exc)
 
-    # отправка данных на FTP сервер
-    write_data_to_xlsx()
-    # upload_updtable_to_ftp()
+
