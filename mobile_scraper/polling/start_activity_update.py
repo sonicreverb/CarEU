@@ -7,8 +7,8 @@ while True:
         update_tcalc()
         print(f"\n[ACTIVITY UPDATER] Таможенный калькулятор успешно обновлен: {datetime.datetime.now()}")
 
-        update_final_prices()
-        print(f"\n[ACTIVITY UPDATER] Цены товаров успешно обновлены: {datetime.datetime.now()}")
+        # update_final_prices()
+        # print(f"\n[ACTIVITY UPDATER] Цены товаров успешно обновлены: {datetime.datetime.now()}")
 
         get_all_active_links(flag_upd_activity=True)
         update_products_activity(flag_upd_activity=True)

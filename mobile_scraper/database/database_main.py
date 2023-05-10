@@ -588,6 +588,9 @@ def write_data_to_xlsx():
     # получаем соединение
     connection = get_connection_to_db()
 
+    update_final_prices()
+    euro_rate = get_euro_rate()
+
     # если соединение установлено успешно
     if connection:
         with connection.cursor() as cursor:
@@ -599,17 +602,19 @@ def write_data_to_xlsx():
             workbook = openpyxl.Workbook()
             worksheet = workbook.active
 
-            # Запись заголовков столбцов
+            # запись заголовков столбцов
             columns = [i[0] for i in cursor.description]
             for column_index, column_name in enumerate(columns, start=1):
                 column_letter = get_column_letter(column_index)
                 worksheet[f"{column_letter}1"] = column_name
+                worksheet["BF1"] = 'euro_rate'
 
             # запись данных
             for row_index, row in enumerate(rows, start=2):
                 for column_index, cell_value in enumerate(row):
                     column_letter = get_column_letter(column_index + 1)
                     worksheet[f"{column_letter}{row_index}"] = cell_value
+                    worksheet[f"BF{row_index}"] = str(euro_rate)
 
             # сохранение файла
             filename = osph.join(BASE_DIR, 'mobile_scraper', 'database', 'output.xlsx')
