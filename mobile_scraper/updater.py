@@ -12,13 +12,9 @@ from mobile_scraper.database.database_main import write_productdata_to_db, get_l
 HOST = "https://www.mobile.de"
 
 
-def get_product_links_from_page(url, flag_upd_activity=False):
+def get_product_links_from_page(url):
     soup = get_htmlsoup(url)
-
-    if flag_upd_activity:
-        txt_name = "upd_activity.txt"
-    else:
-        txt_name = "active_links.txt"
+    txt_name = "active_links.txt"
 
     # поиск и запись в массив всех ссылок на товары со страницы
     soup_a_li = soup.find_all('a', class_='vehicle-data track-event u-block js-track-event js-track-dealer-ratings')
@@ -39,11 +35,8 @@ def get_product_links_from_page(url, flag_upd_activity=False):
             print('warning: next page link not found', exc)
 
 
-def get_all_active_links(flag_upd_activity=False):
-    if flag_upd_activity:
-        txt_name = "upd_activity.txt"
-    else:
-        txt_name = "active_links.txt"
+def get_all_active_links():
+    txt_name = "active_links.txt"
 
     # очистка содержимого active_links.txt
     with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", txt_name), "w"):
@@ -51,10 +44,7 @@ def get_all_active_links(flag_upd_activity=False):
 
     with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", "filtered_links.txt")) as fl_input:
         for filtered_link in fl_input:
-            if flag_upd_activity:
-                get_product_links_from_page(filtered_link, True)
-            else:
-                get_product_links_from_page(filtered_link)
+            get_product_links_from_page(filtered_link)
 
 
 def get_models_dict():
@@ -121,11 +111,8 @@ def get_models_dict():
     return {"Producer": upload_make, "Models": upload_model, "ModelID": upload_model_id, "URL": upload_links}
 
 
-def update_products_activity(flag_upd_activity=False):
-    if flag_upd_activity:
-        txt_name = "upd_activity.txt"
-    else:
-        txt_name = "active_links.txt"
+def update_products_activity():
+    txt_name = "active_links.txt"
 
     # создаём множество ссылок на товары из таблицы
     local_links = get_local_links_from_db()
@@ -169,10 +156,12 @@ def upload_updtable_to_ftp():
 
     # подключение к FTP серверу
     with ftplib.FTP(ftp_server, ftp_username, ftp_password) as ftp:
+        print('[FTP INFO] Connecting to FTP server...')
         # открытие файла для чтения
         with open(local_file_path, 'rb') as file:
             # загрузка файла на сервер
             ftp.storbinary(f'STOR {remote_file_path}', file)
+            print('[FTP INFO] Result table was uploaded successfully!')
 
 
 def run_updater():
