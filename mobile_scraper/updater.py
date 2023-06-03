@@ -35,8 +35,11 @@ def get_product_links_from_page(url):
             print('warning: next page link not found', exc)
 
 
-def get_all_active_links():
-    txt_name = "active_links.txt"
+def get_all_active_links(flag_upd_activity=False):
+    if flag_upd_activity:
+        txt_name = "activity_upd.txt"
+    else:
+        txt_name = "active_links.txt"
 
     # очистка содержимого active_links.txt
     with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", txt_name), "w"):
@@ -111,8 +114,11 @@ def get_models_dict():
     return {"Producer": upload_make, "Models": upload_model, "ModelID": upload_model_id, "URL": upload_links}
 
 
-def update_products_activity():
-    txt_name = "active_links.txt"
+def update_products_activity(flag_upd_activity=False):
+    if flag_upd_activity:
+        txt_name = "activity_upd.txt"
+    else:
+        txt_name = "active_links.txt"
 
     # создаём множество ссылок на товары из таблицы
     local_links = get_local_links_from_db()
@@ -185,5 +191,3 @@ def run_updater():
 
         except Exception as exc:
             print(exc)
-
-
