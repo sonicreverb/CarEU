@@ -2,14 +2,14 @@ import psycopg2
 import requests
 import re
 import openpyxl
-import os.path as osph
-
 from openpyxl.utils import get_column_letter
-from mobile_scraper.database.config import host, user, password, db_name
+
+import os.path as osph
 from main import BASE_DIR
+from mobile_scraper.database.config import host, user, password, db_name
 
 
-# получение соединения с БД
+# получение соеднения с БД
 def get_connection_to_db():
     try:
         # соединение с существующей базой данных
@@ -58,6 +58,7 @@ def update_models_table_to_db(models_data):
 
                 # SQL запрос
                 query = "INSERT INTO vehicles_models (producer, model, model_id, url) VALUES (%s, %s, %s, %s)"
+                print(query, (producer, model, model_id, url))
                 cursor.execute(query, (producer, model, model_id, url))
 
         connection.commit()
@@ -198,45 +199,6 @@ def get_local_links_from_db():
         connection.close()
         print("[PostGreSQL INFO] Connection closed.")
         return locals_li
-    else:
-        print("[PostGreSQL INFO] Error, couldn't get connection...")
-        return None
-
-
-def get_active_links_from_db():
-    # получаем соединение
-    connection = get_connection_to_db()
-
-    # если соединение установлено успешно
-    if connection:
-        with connection.cursor() as cursor:
-            # проверка на существование таблицы
-            table_name = "vehicles_data"
-            cursor.execute("SELECT EXISTS(SELECT relname FROM pg_class WHERE relname=%s)", (table_name,))
-            table_exists = cursor.fetchone()[0]
-
-            if table_exists:
-                result = []
-
-                # получение марок из БД
-                cursor.execute(
-                    "SELECT source_url FROM vehicles_data WHERE activity = true;"
-                )
-                for url in cursor.fetchall():
-                    result.append(url[0])
-
-                print("[PostGreSQL INFO] Data was read successfully.")
-
-            else:
-                print(f"[PostGreSQL INFO] Error while trying to read {table_name}. {table_name} doesn't exist.")
-                connection.close()
-                return None
-
-        connection.commit()
-        # прикрываем соединение
-        connection.close()
-        print("[PostGreSQL INFO] Connection closed.")
-        return result
     else:
         print("[PostGreSQL INFO] Error, couldn't get connection...")
         return None
@@ -421,8 +383,48 @@ def write_productdata_to_db(product_data):
         print("[PostGreSQL INFO] Error, couldn't get connection...")
 
 
-# отмечает товар неактивным в БД по его ссылыке
-def edit_product_activity_in_db(local_link):
+# возвращает массив неактивныъ ссылок из БД на обработку
+def get_unactive_links_for_validation():
+    # получаем соединение
+    connection = get_connection_to_db()
+
+    # если соединение установлено успешно
+    if connection:
+        with connection.cursor() as cursor:
+            # проверка на существование таблицы
+            table_name = "vehicles_data"
+            cursor.execute("SELECT EXISTS(SELECT relname FROM pg_class WHERE relname=%s)", (table_name,))
+            table_exists = cursor.fetchone()[0]
+
+            if table_exists:
+                result = []
+
+                # получение марок из БД
+                cursor.execute(
+                    "SELECT source_url FROM vehicles_data WHERE activity = false AND activity_validation = false;"
+                )
+                for url in cursor.fetchall():
+                    result.append(url[0])
+
+                print("[PostGreSQL INFO] Data was read successfully.")
+
+            else:
+                print(f"[PostGreSQL INFO] Error while trying to read {table_name}. {table_name} doesn't exist.")
+                connection.close()
+                return None
+
+        connection.commit()
+        # прикрываем соединение
+        connection.close()
+        print("[PostGreSQL INFO] Connection closed.")
+        return result
+    else:
+        print("[PostGreSQL INFO] Error, couldn't get connection...")
+        return None
+
+
+# отмечает товар неактивым в БД по его сслыке
+def edit_product_activity_in_db(local_link, status='None'):
     # получаем соединение
     connection = get_connection_to_db()
 
@@ -437,19 +439,37 @@ def edit_product_activity_in_db(local_link):
             if table_exists:
                 locals_li = []
 
-                # отметка товара неактивным в БД
-                cursor.execute(
-                    "UPDATE vehicles_data SET activity = false WHERE source_url = "
-                    f"'{local_link}';"
-                )
-                # установка даты, с которой товар стал неактивен в БД
-                cursor.execute(
-                    "UPDATE vehicles_data SET unactive_since = NOW() WHERE activity = false AND unactive_since is NULL;"
-                )
-                # удаление товаров по истечению одного дня после отметки их неактивными
-                cursor.execute(
-                    "DELETE FROM vehicles_data WHERE unactive_since <= NOW() - INTERVAL '1 day';"
-                )
+                if status == "None":
+                    # отметка товара неактивным в БД
+                    cursor.execute(
+                        "UPDATE vehicles_data SET activity = false WHERE source_url = "
+                        f"'{local_link}';"
+                    )
+
+                    # установка даты, с которой товар стал неактивен в БД
+                    cursor.execute(
+                        "UPDATE vehicles_data SET unactive_since = NOW() WHERE activity = false "
+                        "AND unactive_since is NULL;"
+                    )
+                    # удаление товаров по истечению одного дня после отметки их неактивными
+                    cursor.execute(
+                        "DELETE FROM vehicles_data WHERE unactive_since <= NOW() - INTERVAL '1 day';"
+                    )
+
+                if status == "NonActive":
+                    # подтверждение неактивности товара
+                    cursor.execute(
+                        "UPDATE vehicles_data SET activity_valitadion = true WHERE source_url = "
+                        f"'{local_link}';"
+                    )
+
+                if status == "Active":
+                    # изменение активности товара
+                    cursor.execute(
+                        "UPDATE vehicles_data SET activity = true, unactive_since = NULL WHERE source_url ="
+                        f"{local_link}"
+                    )
+
             else:
                 print(f"[PostGreSQL INFO] Error while trying to read {table_name}. {table_name} doesn't exist.")
                 connection.close()
@@ -520,12 +540,12 @@ def create_tcalc():
         connection.commit()
         # прикрываем соединение
         connection.close()
-        print("[PostGreSQL INFO TCALC CREATE] Connection closed.")
+        print("[PostGreSQL INFO] Connection closed.")
     else:
-        print("[PostGreSQL INFO TCALC CREATE] Error, couldn't get connection...")
+        print("[PostGreSQL INFO] Error, couldn't get connection...")
 
 
-# обновление таможенного калькулятора согласно текущему курсу
+# обновление таможенного калькулятора согласно текузему курсу
 def update_tcalc():
     # получаем соединение
     connection = get_connection_to_db()
@@ -558,10 +578,10 @@ def update_tcalc():
         connection.commit()
         # прикрываем соединение
         connection.close()
-        print('[PostGreSQL INFO TCALC UPD] tcalc UPDATE COMPLETE.')
-        print("[PostGreSQL INFO TCALC UPD] Connection closed.")
+        print('[PostGreSQL INFO] tcalc UPDATE COMPLETE.')
+        print("[PostGreSQL INFO] Connection closed.")
     else:
-        print("[PostGreSQL INFO TCALC UPD] Error, couldn't get connection...")
+        print("[PostGreSQL INFO] Error, couldn't get connection...")
 
 
 # обновление цен в таблице
@@ -615,10 +635,10 @@ def update_final_prices():
         connection.commit()
         # прикрываем соединение
         connection.close()
-        print('[PostGreSQL INFO UPD FINAL PRICES] vehicles_data UPDATE COMPLETE.')
-        print("[PostGreSQL INFO UPD FINAL PRICES] Connection closed.")
+        print('[PostGreSQL INFO] vehicles_data UPDATE COMPLETE.')
+        print("[PostGreSQL INFO] Connection closed.")
     else:
-        print("[PostGreSQL INFO UPD FINAL PRICES] Error, couldn't get connection...")
+        print("[PostGreSQL INFO] Error, couldn't get connection...")
 
 
 # запись данных из БД в csv файл
@@ -650,13 +670,9 @@ def write_data_to_xlsx():
             # запись данных
             for row_index, row in enumerate(rows, start=2):
                 for column_index, cell_value in enumerate(row):
-                    try:
-                        column_letter = get_column_letter(column_index + 1)
-                        print(column_letter, row_index)
-                        worksheet[f"{column_letter}{row_index}"] = str(cell_value)
-                        worksheet[f"BF{row_index}"] = str(euro_rate)
-                    except Exception as _ex:
-                        print(_ex)
+                    column_letter = get_column_letter(column_index + 1)
+                    worksheet[f"{column_letter}{row_index}"] = cell_value
+                    worksheet[f"BF{row_index}"] = str(euro_rate)
 
             # сохранение файла
             filename = osph.join(BASE_DIR, 'mobile_scraper', 'database', 'output.xlsx')
@@ -665,7 +681,7 @@ def write_data_to_xlsx():
         connection.commit()
         # прикрываем соединение
         connection.close()
-        print("[PostGreSQL INFO XLSX] Connection closed.")
+        print("[PostGreSQL INFO] Connection closed.")
         print("[XLSX FILE] XLSX file was updated successfully.")
     else:
-        print("[PostGreSQL INFO XLSX] Error, couldn't get connection...")
+        print("[PostGreSQL INFO] Error, couldn't get connection...")
