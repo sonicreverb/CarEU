@@ -224,10 +224,7 @@ def write_productdata_to_db(product_data):
             name = product_data['Title']
             url = product_data['URL']
             brutto_price = product_data['BruttoPrice']
-            if product_data["NettoPrice"]:
-                netto_price = product_data['NettoPrice']
-            else:
-                netto_price = '-'
+            netto_price = product_data['NettoPrice']
 
             # ПРОИЗВОДИТЕЛЬ И МОДЕЛЬ
             all_models_dict = read_models_from_db()
