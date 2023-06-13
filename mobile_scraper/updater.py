@@ -181,13 +181,15 @@ def run_updater():
             # непосредственно парсинг товаров
             print(f"\n[UPDATER INFO] {product_counter}: {link}")
             product_data = get_data(link)
-            write_productdata_to_db(product_data)
-            product_counter += 1
 
-            # отправка данных на FTP сервер каждую тысячу товаров
-            if product_counter % 1000 == 0:
-                write_data_to_xlsx()
-                upload_updtable_to_ftp()
+            if product_data:
+                write_productdata_to_db(product_data)
+                product_counter += 1
+
+                # отправка данных на FTP сервер каждую тысячу товаров
+                if product_counter % 100 == 0:
+                    write_data_to_xlsx()
+                    upload_updtable_to_ftp()
 
         except Exception as exc:
-            print(exc)
+            print(exc, "in updater.py line 196")

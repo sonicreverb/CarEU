@@ -1,12 +1,16 @@
+import datetime
+
 import psycopg2
-import requests
+# import requests
 import re
 import openpyxl
-from openpyxl.utils import get_column_letter
-
 import os.path as osph
+
+
+from openpyxl.utils import get_column_letter
 from main import BASE_DIR
 from mobile_scraper.database.config import host, user, password, db_name
+from pycbrf import ExchangeRates
 
 
 # получение соеднения с БД
@@ -125,6 +129,7 @@ def read_models_from_db():
         return None
 
 
+# получение цены расстоможки согласно объёму из БД
 def get_custom_clearance_coeff(volume):
     # получаем соединение
     connection = get_connection_to_db()
@@ -219,7 +224,10 @@ def write_productdata_to_db(product_data):
             name = product_data['Title']
             url = product_data['URL']
             brutto_price = product_data['BruttoPrice']
-            netto_price = product_data['NettoPrice']
+            if product_data["NettoPrice"]:
+                netto_price = product_data['NettoPrice']
+            else:
+                netto_price = '-'
 
             # ПРОИЗВОДИТЕЛЬ И МОДЕЛЬ
             all_models_dict = read_models_from_db()
@@ -487,9 +495,13 @@ def edit_product_activity_in_db(local_link, status='None'):
 
 # получение текущего курса
 def get_euro_rate():
-    response = requests.get("https://www.cbr-xml-daily.ru/daily_json.js").json()
-    eur_rate = response["Valute"]["EUR"]["Value"]
-    return float(eur_rate)
+    # response = requests.get("https://www.cbr-xml-daily.ru/daily_json.js").json()
+    # eur_rate = response["Valute"]["EUR"]["Value"]
+    # return float(eur_rate)
+    date = datetime.datetime.now().strftime("%Y-%m-%d")
+    rates = ExchangeRates(date)
+    currency_data = list(filter(lambda el: el.code == "EUR", rates.rates))[0]
+    return float(currency_data.value)
 
 
 # создание таблицы таможенного калькулятора
