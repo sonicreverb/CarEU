@@ -78,7 +78,7 @@ def get_models_dict():
             driver.find_element('xpath', '//*[@id="mde-consent-modal-container"]/div[2]/div[2]/div[1]/button').click()
             Select(driver.find_element('xpath', '//*[@id="makeModelVariant1Make"]')).select_by_value(car_id)
             Select(driver.find_element('xpath', '//*[@id="minFirstRegistration"]')).select_by_value('2018')
-            driver.find_element('xpath', '/html/body/div[1]/div/section[2]/div[2]/div/div[1]/form/div[4]/div[2]/input')\
+            driver.find_element('xpath', '/html/body/div[1]/div/section[2]/div[2]/div/div[1]/form/div[4]/div[2]/input') \
                 .click()
             time.sleep(3)
 
@@ -114,11 +114,26 @@ def get_models_dict():
     return {"Producer": upload_make, "Models": upload_model, "ModelID": upload_model_id, "URL": upload_links}
 
 
-def update_products_activity(flag_upd_activity=False):
-    if flag_upd_activity:
-        txt_name = "activity_upd.txt"
-    else:
-        txt_name = "active_links.txt"
+# загрузка данных из БД на ftp
+def upload_updtable_to_ftp():
+    ftp_server = 'careu.ru'
+    ftp_username = 'pikprice_123'
+    ftp_password = 'u6M&k9J4'
+    remote_file_path = 'output.xlsx'
+    local_file_path = os.path.join(BASE_DIR, 'mobile_scraper', 'database', 'output.xlsx')
+
+    # подключение к FTP серверу
+    with ftplib.FTP(ftp_server, ftp_username, ftp_password) as ftp:
+        print('[FTP INFO] Connecting to FTP server...')
+        # открытие файла для чтения
+        with open(local_file_path, 'rb') as file:
+            # загрузка файла на сервер
+            ftp.storbinary(f'STOR {remote_file_path}', file)
+            print('[FTP INFO] Result table was uploaded successfully!')
+
+
+def update_products_activity():
+    txt_name = "active_links.txt"
 
     # создаём множество ссылок на товары из таблицы
     local_links = get_local_links_from_db()
@@ -138,36 +153,11 @@ def update_products_activity(flag_upd_activity=False):
     active_set = set(active_li)
     print("active set done")
 
-    # вычитаем множества и получаем ссылки, которые надо пометить неактивными в таблице +
-    # необходимо спарсить и дозагрузить в таблице
-    del_links = local_set - active_set
+    # вычитаем множества и получаем ссылки необходимо спарсить и дозагрузить в таблице
     upd_links = active_set - local_set
     print('total upd links: ', len(upd_links))
 
-    # отмечаем неактивные товары в таблице
-    for link in local_links:
-        if link in del_links:
-            edit_product_activity_in_db(link)
-
     return upd_links
-
-
-# загрузка данных из БД на ftp
-def upload_updtable_to_ftp():
-    ftp_server = 'careu.ru'
-    ftp_username = 'pikprice_123'
-    ftp_password = 'u6M&k9J4'
-    remote_file_path = 'output.xlsx'
-    local_file_path = os.path.join(BASE_DIR, 'mobile_scraper', 'database', 'output.xlsx')
-
-    # подключение к FTP серверу
-    with ftplib.FTP(ftp_server, ftp_username, ftp_password) as ftp:
-        print('[FTP INFO] Connecting to FTP server...')
-        # открытие файла для чтения
-        with open(local_file_path, 'rb') as file:
-            # загрузка файла на сервер
-            ftp.storbinary(f'STOR {remote_file_path}', file)
-            print('[FTP INFO] Result table was uploaded successfully!')
 
 
 def run_updater():

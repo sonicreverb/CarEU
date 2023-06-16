@@ -169,7 +169,7 @@ def get_custom_clearance_coeff(volume):
         return None
 
 
-# чтение локальных ссылок из БЛ
+# чтение локальных ссылок из БД
 def get_local_links_from_db():
     # получаем соединение
     connection = get_connection_to_db()
@@ -188,6 +188,46 @@ def get_local_links_from_db():
                 # получение марок из БД
                 cursor.execute(
                     "SELECT source_url from vehicles_data;"
+                )
+                for local_url in cursor.fetchall():
+                    locals_li.append(bytes(local_url[0], 'utf-8').decode('unicode_escape'))
+
+                print("[PostGreSQL INFO] Data was read successfully.")
+
+            else:
+                print(f"[PostGreSQL INFO] Error while trying to read {table_name}. {table_name} doesn't exist.")
+                connection.close()
+                return None
+
+        connection.commit()
+        # прикрываем соединение
+        connection.close()
+        print("[PostGreSQL INFO] Connection closed.")
+        return locals_li
+    else:
+        print("[PostGreSQL INFO] Error, couldn't get connection...")
+        return None
+
+
+# чтение активных ссылок из БД
+def get_active_links_from_db():
+    # получаем соединение
+    connection = get_connection_to_db()
+
+    # если соединение установлено успешно
+    if connection:
+        with connection.cursor() as cursor:
+            # проверка на существование таблицы
+            table_name = "vehicles_data"
+            cursor.execute("SELECT EXISTS(SELECT relname FROM pg_class WHERE relname=%s)", (table_name,))
+            table_exists = cursor.fetchone()[0]
+
+            if table_exists:
+                locals_li = []
+
+                # получение марок из БД
+                cursor.execute(
+                    "SELECT source_url from vehicles_data WHERE activity = true;"
                 )
                 for local_url in cursor.fetchall():
                     locals_li.append(bytes(local_url[0], 'utf-8').decode('unicode_escape'))
@@ -388,51 +428,10 @@ def write_productdata_to_db(product_data):
         print("[PostGreSQL INFO] Error, couldn't get connection...")
 
 
-# возвращает массив неактивныъ ссылок из БД на обработку
-def get_unactive_links_for_validation():
-    # получаем соединение
-    connection = get_connection_to_db()
-
-    # если соединение установлено успешно
-    if connection:
-        with connection.cursor() as cursor:
-            # проверка на существование таблицы
-            table_name = "vehicles_data"
-            cursor.execute("SELECT EXISTS(SELECT relname FROM pg_class WHERE relname=%s)", (table_name,))
-            table_exists = cursor.fetchone()[0]
-
-            if table_exists:
-                result = []
-
-                # получение марок из БД
-                cursor.execute(
-                    "SELECT source_url FROM vehicles_data WHERE activity = false AND activity_validation = false;"
-                )
-                for url in cursor.fetchall():
-                    result.append(url[0])
-
-                print("[PostGreSQL INFO] Data was read successfully.")
-
-            else:
-                print(f"[PostGreSQL INFO] Error while trying to read {table_name}. {table_name} doesn't exist.")
-                connection.close()
-                return None
-
-        connection.commit()
-        # прикрываем соединение
-        connection.close()
-        print("[PostGreSQL INFO] Connection closed.")
-        return result
-    else:
-        print("[PostGreSQL INFO] Error, couldn't get connection...")
-        return None
-
-
 # отмечает товар неактивым в БД по его сслыке
-def edit_product_activity_in_db(local_link, status='None'):
+def edit_product_activity_in_db(local_link):
     # получаем соединение
     connection = get_connection_to_db()
-
     # если соединение установлено успешно
     if connection:
         with connection.cursor() as cursor:
@@ -440,46 +439,25 @@ def edit_product_activity_in_db(local_link, status='None'):
             table_name = "vehicles_data"
             cursor.execute("SELECT EXISTS(SELECT relname FROM pg_class WHERE relname=%s)", (table_name,))
             table_exists = cursor.fetchone()[0]
-
             if table_exists:
                 locals_li = []
-
-                if status == "None":
-                    # отметка товара неактивным в БД
-                    cursor.execute(
-                        "UPDATE vehicles_data SET activity = false WHERE source_url = "
-                        f"'{local_link}';"
-                    )
-
-                    # установка даты, с которой товар стал неактивен в БД
-                    cursor.execute(
-                        "UPDATE vehicles_data SET unactive_since = NOW() WHERE activity = false "
-                        "AND unactive_since is NULL;"
-                    )
-                    # удаление товаров по истечению одного дня после отметки их неактивными
-                    cursor.execute(
-                        "DELETE FROM vehicles_data WHERE unactive_since <= NOW() - INTERVAL '1 day';"
-                    )
-
-                if status == "NonActive":
-                    # подтверждение неактивности товара
-                    cursor.execute(
-                        "UPDATE vehicles_data SET activity_valitadion = true WHERE source_url = "
-                        f"'{local_link}';"
-                    )
-
-                if status == "Active":
-                    # изменение активности товара
-                    cursor.execute(
-                        "UPDATE vehicles_data SET activity = true, unactive_since = NULL WHERE source_url ="
-                        f"{local_link}"
-                    )
-
+                # отметка товара неактивным в БД
+                cursor.execute(
+                    "UPDATE vehicles_data SET activity = false WHERE source_url = "
+                    f"'{local_link}';"
+                )
+                # установка даты, с которой товар стал неактивен в БД
+                cursor.execute(
+                    "UPDATE vehicles_data SET unactive_since = NOW() WHERE activity = false AND unactive_since is NULL;"
+                )
+                # удаление товаров по истечению одного дня после отметки их неактивными
+                cursor.execute(
+                    "DELETE FROM vehicles_data WHERE unactive_since <= NOW() - INTERVAL '1 day';"
+                )
             else:
                 print(f"[PostGreSQL INFO] Error while trying to read {table_name}. {table_name} doesn't exist.")
                 connection.close()
                 return None
-
         connection.commit()
         # прикрываем соединение
         connection.close()
