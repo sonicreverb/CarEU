@@ -60,6 +60,10 @@ def get_data(url):
         for img_index in range(len(soup_img_li) // 2 - 1):
             img_li.append(soup_img_li[img_index].get('data-src'))
 
+        if len(img_li) <= 4:
+            print("[GET DATA INFO] No netto or brutto prices.")
+            return None
+
         technical_options_soup_li = soup.find('div', class_='vip-details-block u-margin-bottom-18') \
             .find_all('span', {'class': 'g-col-6'})
         TO_dict = {}
@@ -112,5 +116,3 @@ def get_data(url):
     except Exception as ex:
         print(f"{ex} in line 99 scraper_main.py")
         return None
-
-
