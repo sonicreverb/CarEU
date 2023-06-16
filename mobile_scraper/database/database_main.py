@@ -658,7 +658,10 @@ def write_data_to_xlsx():
             for row_index, row in enumerate(rows, start=2):
                 for column_index, cell_value in enumerate(row):
                     column_letter = get_column_letter(column_index + 1)
-                    worksheet[f"{column_letter}{row_index}"] = str(cell_value)
+                    try:
+                        worksheet[f"{column_letter}{row_index}"] = str(cell_value)
+                    except Exception as _ex:
+                        print('[XLSX FILE] could\'t write cell value, string error.')
                     worksheet[f"BF{row_index}"] = str(euro_rate)
 
             # сохранение файла
