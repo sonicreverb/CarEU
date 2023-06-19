@@ -6,8 +6,8 @@ from selenium.webdriver.support.select import Select
 from bs4 import BeautifulSoup
 from main import BASE_DIR
 from mobile_scraper.scraper_main import get_htmlsoup, get_data, create_driver
-from mobile_scraper.database.database_main import write_productdata_to_db, get_local_links_from_db, \
-    edit_product_activity_in_db, write_data_to_xlsx
+from mobile_scraper.database.database_main import write_productdata_to_db, get_local_links_from_db,\
+    write_data_to_xlsx, output_filename
 
 HOST = "https://www.mobile.de"
 
@@ -35,11 +35,8 @@ def get_product_links_from_page(url):
             print('warning: next page link not found', exc)
 
 
-def get_all_active_links(flag_upd_activity=False):
-    if flag_upd_activity:
-        txt_name = "activity_upd.txt"
-    else:
-        txt_name = "active_links.txt"
+def get_all_active_links():
+    txt_name = "active_links.txt"
 
     # очистка содержимого active_links.txt
     with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", txt_name), "w"):
@@ -119,8 +116,8 @@ def upload_updtable_to_ftp():
     ftp_server = 'careu.ru'
     ftp_username = 'pikprice_123'
     ftp_password = 'u6M&k9J4'
-    remote_file_path = 'output.xlsx'
-    local_file_path = os.path.join(BASE_DIR, 'mobile_scraper', 'database', 'output.xlsx')
+    remote_file_path = output_filename
+    local_file_path = os.path.join(BASE_DIR, 'mobile_scraper', 'database', output_filename)
 
     # подключение к FTP серверу
     with ftplib.FTP(ftp_server, ftp_username, ftp_password) as ftp:

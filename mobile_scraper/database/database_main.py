@@ -12,6 +12,8 @@ from main import BASE_DIR
 from mobile_scraper.database.config import host, user, password, db_name
 from pycbrf import ExchangeRates
 
+output_filename = 'output.xlsx'
+
 
 # получение соеднения с БД
 def get_connection_to_db():
@@ -271,11 +273,12 @@ def write_productdata_to_db(product_data):
             product_make = ' '
             product_model = ' '
 
+            # todo убедиться в правильности
             for make in all_models_dict:
-                if make in product_data['Title']:
+                if make in name.split():
                     product_make = make
                     for model in all_models_dict[make]:
-                        if model in product_data['Title']:
+                        if model in name.split():
                             product_model = model
 
             # ПОБОЧКА
@@ -665,7 +668,7 @@ def write_data_to_xlsx():
                     worksheet[f"BF{row_index}"] = str(euro_rate)
 
             # сохранение файла
-            filename = osph.join(BASE_DIR, 'mobile_scraper', 'database', 'output.xlsx')
+            filename = osph.join(BASE_DIR, 'mobile_scraper', 'database', output_filename)
             workbook.save(filename)
 
         connection.commit()
