@@ -6,13 +6,10 @@ import re
 import openpyxl
 import os.path as osph
 
-
 from openpyxl.utils import get_column_letter
 from main import BASE_DIR
-from mobile_scraper.database.config import host, user, password, db_name
+from mobile_scraper.database.config import host, user, password, db_name, output_filename
 from pycbrf import ExchangeRates
-
-output_filename = 'output.xlsx'
 
 
 # получение соеднения с БД
@@ -75,59 +72,53 @@ def update_models_table_to_db(models_data):
         print("[PostGreSQL INFO] Error, couldn't get connection...")
 
 
-# получение словаря с моделями из БД
-def read_models_from_db():
+# возвращает результат выполняемого запроса в БД
+def get_querry_result(querry):
     # получаем соединение
     connection = get_connection_to_db()
 
     # если соединение установлено успешно
     if connection:
         with connection.cursor() as cursor:
-            # проверка на существование таблицы
-            table_name = "vehicles_models"
-            cursor.execute("SELECT EXISTS(SELECT relname FROM pg_class WHERE relname=%s)", (table_name,))
-            table_exists = cursor.fetchone()[0]
+            result = []
 
-            if table_exists:
-                producers_li = []
-                models_li = []
+            # выполнение БД запроса
+            cursor.execute(querry)
 
-                # получение марок из БД
-                cursor.execute(
-                    "SELECT producer from vehicles_models;"
-                )
-                for producer_string in cursor.fetchall():
-                    producers_li.append(bytes(producer_string[0], 'utf-8').decode('unicode_escape'))
+            for bd_object in cursor.fetchall():
+                result.append(bytes(bd_object[0], 'utf-8').decode('unicode_escape'))
 
-                # получение моделей из БД
-                cursor.execute(
-                    "SELECT model from vehicles_models;"
-                )
-                for models_string in cursor.fetchall():
-                    models_li.append(bytes(models_string[0], 'utf-8').decode('unicode_escape'))
-
-                # инициализация словаря формата - модель: [марка_модели1, марка_модели2, ...]
-                producers_models_data = {producer: [] for producer in set(producers_li)}
-
-                # заполнение словаря моделями
-                for indx in range(len(producers_li)):
-                    producers_models_data[producers_li[indx]].append(models_li[indx])
-
-                print("[PostGreSQL INFO] Data was read successfully.")
-
-            else:
-                print(f"[PostGreSQL INFO] Error while trying to read {table_name}. {table_name} doesn't exist.")
-                connection.close()
-                return None
+            print("[PostGreSQL INFO] Data was read successfully.")
 
         connection.commit()
         # прикрываем соединение
         connection.close()
         print("[PostGreSQL INFO] Connection closed.")
+        return result
+    else:
+        print("[PostGreSQL INFO] Error, couldn't get connection...")
+        return None
+
+
+# получение словаря с моделями из БД
+def read_models_from_db():
+    # получение марок из БД
+    producers_li = get_querry_result("SELECT producer from vehicles_models;")
+
+    # получение моделей из БД
+    models_li = get_querry_result("SELECT model from vehicles_models;")
+
+    if producers_li and models_li:
+        # инициализация словаря формата - модель: [марка_модели1, марка_модели2, ...]
+        producers_models_data = {producer: [] for producer in set(producers_li)}
+
+        # заполнение словаря моделями
+        for indx in range(len(producers_li)):
+            producers_models_data[producers_li[indx]].append(models_li[indx])
 
         return producers_models_data
     else:
-        print("[PostGreSQL INFO] Error, couldn't get connection...")
+        print('Error while trying to read models or producer in read_models_from_db().')
         return None
 
 
@@ -173,81 +164,28 @@ def get_custom_clearance_coeff(volume):
 
 # чтение локальных ссылок из БД
 def get_local_links_from_db():
-    # получаем соединение
-    connection = get_connection_to_db()
-
-    # если соединение установлено успешно
-    if connection:
-        with connection.cursor() as cursor:
-            # проверка на существование таблицы
-            table_name = "vehicles_data"
-            cursor.execute("SELECT EXISTS(SELECT relname FROM pg_class WHERE relname=%s)", (table_name,))
-            table_exists = cursor.fetchone()[0]
-
-            if table_exists:
-                locals_li = []
-
-                # получение марок из БД
-                cursor.execute(
-                    "SELECT source_url from vehicles_data;"
-                )
-                for local_url in cursor.fetchall():
-                    locals_li.append(bytes(local_url[0], 'utf-8').decode('unicode_escape'))
-
-                print("[PostGreSQL INFO] Data was read successfully.")
-
-            else:
-                print(f"[PostGreSQL INFO] Error while trying to read {table_name}. {table_name} doesn't exist.")
-                connection.close()
-                return None
-
-        connection.commit()
-        # прикрываем соединение
-        connection.close()
-        print("[PostGreSQL INFO] Connection closed.")
-        return locals_li
-    else:
-        print("[PostGreSQL INFO] Error, couldn't get connection...")
+    try:
+        return get_querry_result("SELECT source_url from vehicles_data;")
+    except Exception as _ex:
+        print('Error in get_local_links from db', _ex)
         return None
 
 
 # чтение активных ссылок из БД
 def get_active_links_from_db():
-    # получаем соединение
-    connection = get_connection_to_db()
+    try:
+        return get_querry_result("SELECT source_url from vehicles_data WHERE activity = true;")
+    except Exception as _ex:
+        print('Error in get_active_links from db', _ex)
+        return None
 
-    # если соединение установлено успешно
-    if connection:
-        with connection.cursor() as cursor:
-            # проверка на существование таблицы
-            table_name = "vehicles_data"
-            cursor.execute("SELECT EXISTS(SELECT relname FROM pg_class WHERE relname=%s)", (table_name,))
-            table_exists = cursor.fetchone()[0]
 
-            if table_exists:
-                locals_li = []
-
-                # получение марок из БД
-                cursor.execute(
-                    "SELECT source_url from vehicles_data WHERE activity = true;"
-                )
-                for local_url in cursor.fetchall():
-                    locals_li.append(bytes(local_url[0], 'utf-8').decode('unicode_escape'))
-
-                print("[PostGreSQL INFO] Data was read successfully.")
-
-            else:
-                print(f"[PostGreSQL INFO] Error while trying to read {table_name}. {table_name} doesn't exist.")
-                connection.close()
-                return None
-
-        connection.commit()
-        # прикрываем соединение
-        connection.close()
-        print("[PostGreSQL INFO] Connection closed.")
-        return locals_li
-    else:
-        print("[PostGreSQL INFO] Error, couldn't get connection...")
+# чтение активных наименований из БД
+def get_active_names_from_db():
+    try:
+        return get_querry_result("SELECT name FROM vehicles_data WHERE activity = true;")
+    except Exception as _ex:
+        print('Error in get_active_links from db', _ex)
         return None
 
 
@@ -616,7 +554,7 @@ def update_final_prices():
                     custom_clearance_rubles = 0
 
                 # SQL запрос на обновление цен
-                query = f"UPDATE vehicles_data SET price_brutto_rubles = {brutto_price_rubles}, commission_price_rubles"\
+                query = f"UPDATE vehicles_data SET price_brutto_rubles = {brutto_price_rubles}, commission_price_rubles" \
                         f" = {comission_price_rubles}, delivery_price_rubles = {delivery_price_rubles}, " \
                         f"customs_clearance_price = {custom_clearance_rubles} WHERE id = '{product_id}';"
 

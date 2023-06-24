@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from main import BASE_DIR
 from mobile_scraper.scraper_main import get_htmlsoup, get_data, create_driver
 from mobile_scraper.database.database_main import write_productdata_to_db, get_local_links_from_db,\
-    write_data_to_xlsx, output_filename
+    write_data_to_xlsx, output_filename, get_active_names_from_db
 
 HOST = "https://www.mobile.de"
 
@@ -169,7 +169,9 @@ def run_updater():
             print(f"\n[UPDATER INFO] {product_counter}: {link}")
             product_data = get_data(link)
 
-            if product_data:
+            active_names = get_active_names_from_db()
+
+            if product_data and (product_data['Title'] not in active_names):
                 write_productdata_to_db(product_data)
                 product_counter += 1
 
