@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from googletrans import Translator
 
 
+# возвращает веб-драйвер
 def create_driver():
     chrome_options = webdriver.ChromeOptions()
     prefs = {"profile.managed_default_content_settings.images": 2}
@@ -16,6 +17,7 @@ def create_driver():
     return driver
 
 
+# возвращает soup страницы (тип данных BeautifulSoup)
 def get_htmlsoup(url):
     driver = create_driver()
 
@@ -31,6 +33,7 @@ def get_htmlsoup(url):
         return 'error invalid url'
 
 
+# возвращает словарь productdata с данными машины с указанным url
 def get_data(url):
     try:
         soup = get_htmlsoup(url)
@@ -60,8 +63,8 @@ def get_data(url):
         for img_index in range(len(soup_img_li) // 2 - 1):
             img_li.append(soup_img_li[img_index].get('data-src'))
 
-        if len(img_li) <= 4:
-            print("[GET DATA INFO] No netto or brutto prices.")
+        if len(img_li) < 8:
+            print("[GET DATA INFO] Not enough images.")
             return None
 
         technical_options_soup_li = soup.find('div', class_='vip-details-block u-margin-bottom-18') \

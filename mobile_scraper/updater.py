@@ -7,14 +7,17 @@ from bs4 import BeautifulSoup
 from main import BASE_DIR
 from mobile_scraper.scraper_main import get_htmlsoup, get_data, create_driver
 from mobile_scraper.database.database_main import write_productdata_to_db, get_local_links_from_db,\
-    write_data_to_xlsx, output_filename, get_active_names_from_db
+    write_data_to_xlsx, output_filename, get_active_names_from_db, edit_product_activity_in_db
 
 HOST = "https://www.mobile.de"
 
 
-def get_product_links_from_page(url):
+def get_product_links_from_page(url, flag_upd_activity=False):
     soup = get_htmlsoup(url)
-    txt_name = "active_links.txt"
+    if flag_upd_activity:
+        txt_name = 'upd_links.txt'
+    else:
+        txt_name = "active_links.txt"
 
     # поиск и запись в массив всех ссылок на товары со страницы
     soup_a_li = soup.find_all('a', class_='vehicle-data track-event u-block js-track-event js-track-dealer-ratings')
@@ -35,16 +38,19 @@ def get_product_links_from_page(url):
             print('warning: next page link not found', exc)
 
 
-def get_all_active_links():
-    txt_name = "active_links.txt"
+def get_all_active_links(flag_upd_activity=False):
+    if flag_upd_activity:
+        txt_name = 'upd_links.txt'
+    else:
+        txt_name = "active_links.txt"
 
-    # очистка содержимого active_links.txt
+    # очистка содержимого
     with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", txt_name), "w"):
         pass
 
     with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", "filtered_links.txt")) as fl_input:
         for filtered_link in fl_input:
-            get_product_links_from_page(filtered_link)
+            get_product_links_from_page(filtered_link, flag_upd_activity)
 
 
 def get_models_dict():
@@ -129,8 +135,12 @@ def upload_updtable_to_ftp():
             print('[FTP INFO] Result table was uploaded successfully!')
 
 
-def update_products_activity():
-    txt_name = "active_links.txt"
+# возвращает массив upd_links - уникальных ссылок для парсинга; если flag_upd_activity - отмечает неактиные ссылки в БД
+def update_products_activity(flag_upd_activity=False):
+    if flag_upd_activity:
+        txt_name = 'upd_links.txt'
+    else:
+        txt_name = "active_links.txt"
 
     # создаём множество ссылок на товары из таблицы
     local_links = get_local_links_from_db()
@@ -153,6 +163,12 @@ def update_products_activity():
     # вычитаем множества и получаем ссылки необходимо спарсить и дозагрузить в таблице
     upd_links = active_set - local_set
     print('total upd links: ', len(upd_links))
+
+    # неактивные ссылки отмечаем... неактивными)
+    if flag_upd_activity:
+        delete_links = local_set - active_set
+        for del_link in delete_links:
+            edit_product_activity_in_db(del_link)
 
     return upd_links
 
