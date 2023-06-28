@@ -81,7 +81,7 @@ def get_models_dict():
             driver.find_element('xpath', '//*[@id="mde-consent-modal-container"]/div[2]/div[2]/div[1]/button').click()
             Select(driver.find_element('xpath', '//*[@id="makeModelVariant1Make"]')).select_by_value(car_id)
             Select(driver.find_element('xpath', '//*[@id="minFirstRegistration"]')).select_by_value('2018')
-            driver.find_element('xpath', '/html/body/div[1]/div/section[2]/div[2]/div/div[1]/form/div[4]/div[2]/input') \
+            driver.find_element('xpath', '/html/body/div[1]/div/section[2]/div[2]/div/div[1]/form/div[4]/div[2]/input')\
                 .click()
             time.sleep(3)
 
@@ -176,7 +176,7 @@ def update_products_activity(flag_upd_activity=False):
 def run_updater():
     # получаем ссылки для парсинга
     upd_links = update_products_activity()
-
+    last_upd_time = time.time()
     product_counter = 1
 
     for link in upd_links:
@@ -192,7 +192,8 @@ def run_updater():
                 product_counter += 1
 
                 # отправка данных на FTP сервер каждую тысячу товаров
-                if product_counter % 100 == 0:
+                if product_counter % 100 == 0 or time.time() - last_upd_time > 1800:
+                    last_upd_time = time.time()
                     write_data_to_xlsx()
                     upload_updtable_to_ftp()
 
