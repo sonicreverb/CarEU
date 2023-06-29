@@ -1,43 +1,33 @@
 import datetime
-from mobile_scraper.updater import get_htmlsoup
-from mobile_scraper.database.database_main import update_tcalc, edit_product_activity_in_db, get_active_links_from_db
+from mobile_scraper.updater import get_all_active_links, update_products_activity
+from mobile_scraper.database.database_main import update_tcalc, edit_product_activity_in_db, get_unactive_links_from_db
+from mobile_scraper.scraper_main import get_htmlsoup
 
 
-# проверяет активность товара на сайте
-def validate_link_activity(url):
-    soup = get_htmlsoup(url)
-    tag404 = soup.find('h1', string="Страница не найдена")
-
-    if tag404:
-        edit_product_activity_in_db(url)
-        return False
-
-    return True
-
-
-# обновляет активность всех товаров в БД
-def update_product_activity():
-    update_tcalc()
-    print(f"\n[ACTIVITY UPDATER] Таможенный калькулятор успешно обновлен: {datetime.datetime.now()}")
-
-    links = get_active_links_from_db()
-    print(f'[LINKS UPD ACTIVITY] TOTAL LINKS: {len(links)}')
+# поштучно проверяет активность спорных товаров на сайте по его ссылке
+def validate_links_activity():
+    links = get_unactive_links_from_db()
+    total_links = len(links)
     cntr = 1
-    for link in links:
-        try:
-            activity_status = validate_link_activity(link)
-            print(f'[LINKS UPD ACTIVITY] {cntr}. Activity - {activity_status} {link}')
-            cntr += 1
+    for url in links:
+        soup = get_htmlsoup(url)
+        tag404 = soup.find('h1', string="Страница не найдена")
 
-            if cntr % 50 == 0:
-                update_tcalc()
-                print(f"\n[ACTIVITY UPDATER] Таможенный калькулятор успешно обновлен: {datetime.datetime.now()}")
+        if not tag404:
+            edit_product_activity_in_db(url, True)
+            print(f"[UNACTIVE LINKS VALIDATION] {cntr}/{total_links}. {not tag404} - {url}")
 
-        except Exception as _ex:
-            print('[ACTIVITY UPDATER]', datetime.datetime.now(), _ex)
+        else:
+            print(f"[UNACTIVE LINKS VALIDATION] {cntr}/{total_links}. {not tag404} - {url}")
 
-    print(f"[ACTIVITY UPDATER] Активность товаров успешно обновлена: {datetime.datetime.now()}")
+        cntr += 1
 
 
 while True:
-    update_product_activity()
+    update_tcalc()
+    print(f"\n[ACTIVITY UPDATER] Таможенный калькулятор успешно обновлен: {datetime.datetime.now()}")
+
+    get_all_active_links(flag_upd_activity=True)
+    update_products_activity(flag_upd_activity=True)
+    # validate_links_activity()
+    print(f"\n[ACTIVITY UPDATER] Активность товаров успешна обновлена: {datetime.datetime.now()}")

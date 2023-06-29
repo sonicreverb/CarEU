@@ -7,14 +7,17 @@ from bs4 import BeautifulSoup
 from main import BASE_DIR
 from mobile_scraper.scraper_main import get_htmlsoup, get_data, create_driver
 from mobile_scraper.database.database_main import write_productdata_to_db, get_local_links_from_db,\
-    write_data_to_xlsx, output_filename, get_active_names_from_db
+    write_data_to_xlsx, output_filename, get_active_names_from_db, edit_product_activity_in_db
 
 HOST = "https://www.mobile.de"
 
 
-def get_product_links_from_page(url):
+def get_product_links_from_page(url, flag_upd_activity=False):
     soup = get_htmlsoup(url)
-    txt_name = "active_links.txt"
+    if flag_upd_activity:
+        txt_name = 'upd_links.txt'
+    else:
+        txt_name = "active_links.txt"
 
     # поиск и запись в массив всех ссылок на товары со страницы
     soup_a_li = soup.find_all('a', class_='vehicle-data track-event u-block js-track-event js-track-dealer-ratings')
@@ -30,21 +33,25 @@ def get_product_links_from_page(url):
     if soup.find('a', class_='pagination-nav pagination-nav-right btn btn--muted btn--s'):
         try:
             get_product_links_from_page(HOST + soup.find('a', class_='pagination-nav pagination-nav-right btn '
-                                                                     'btn--muted btn--s').get('href'))
+                                                                     'btn--muted btn--s').get('href'),
+                                        flag_upd_activity)
         except Exception as exc:
             print('warning: next page link not found', exc)
 
 
-def get_all_active_links():
-    txt_name = "active_links.txt"
+def get_all_active_links(flag_upd_activity=False):
+    if flag_upd_activity:
+        txt_name = 'upd_links.txt'
+    else:
+        txt_name = "active_links.txt"
 
-    # очистка содержимого active_links.txt
+    # очистка содержимого
     with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", txt_name), "w"):
         pass
 
     with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", "filtered_links.txt")) as fl_input:
         for filtered_link in fl_input:
-            get_product_links_from_page(filtered_link)
+            get_product_links_from_page(filtered_link, flag_upd_activity)
 
 
 def get_models_dict():
@@ -129,30 +136,62 @@ def upload_updtable_to_ftp():
             print('[FTP INFO] Result table was uploaded successfully!')
 
 
-def update_products_activity():
-    txt_name = "active_links.txt"
+# находит все индексы char, которые находятся в string
+def find_all_indexes(string, char):
+    indexes = []
+    for i in range(len(string)):
+        if string[i] == char:
+            indexes.append(i)
+    return indexes
+
+
+# возвращает массив upd_links - уникальных ссылок для парсинга; если flag_upd_activity - отмечает неактиные ссылки в БД
+def update_products_activity(flag_upd_activity=False):
+    if flag_upd_activity:
+        txt_name = 'upd_links.txt'
+    else:
+        txt_name = "active_links.txt"
 
     # создаём множество ссылок на товары из таблицы
     local_links = get_local_links_from_db()
     if local_links:
+        short_links = []
+        for link in local_links:
+            ids = find_all_indexes(link, '/')
+            short_links.append(link[:ids[5]])
         local_set = set(link for link in local_links)
+        short_local_set = set(link for link in short_links)
         print(local_links[0:3])
         print("local set done")
     else:
         local_set = set()
+        short_local_set = set()
         print("null local set done")
 
     # создаём множество актуальных ссылок на товары прямиком с mobile.de
     with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", txt_name), "r") as inp:
         active_li = []
+        short_active_li = []
         for line in inp:
+            ids = find_all_indexes(line.strip(), '/')
+            short_active_li.append(line.strip()[:ids[5]])
             active_li.append(line.strip())
     active_set = set(active_li)
+    short_active_set = set(short_active_li)
     print("active set done")
 
     # вычитаем множества и получаем ссылки необходимо спарсить и дозагрузить в таблице
     upd_links = active_set - local_set
     print('total upd links: ', len(upd_links))
+
+    # неактивные ссылки отмечаем... неактивными)
+    if flag_upd_activity:
+        delete_links = short_local_set - short_active_set
+        print(len(delete_links), delete_links)
+        for idx in range(len(local_links)):
+            for del_link in delete_links:
+                if del_link + '/' in local_links[idx]:
+                    edit_product_activity_in_db(local_links[idx])
 
     return upd_links
 
@@ -160,13 +199,14 @@ def update_products_activity():
 def run_updater():
     # получаем ссылки для парсинга
     upd_links = update_products_activity()
+    len_upd_links = len(upd_links)
     last_upd_time = time.time()
     product_counter = 1
 
     for link in upd_links:
         try:
             # непосредственно парсинг товаров
-            print(f"\n[UPDATER INFO] {product_counter}: {link}")
+            print(f"\n[UPDATER INFO] {product_counter}/{len_upd_links}. {link}")
             product_data = get_data(link)
 
             active_names = get_active_names_from_db()

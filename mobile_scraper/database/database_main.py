@@ -171,10 +171,19 @@ def get_local_links_from_db():
         return None
 
 
-# чтение активных ссылок из БД
+# возвращает массив активных ссылок из БД
 def get_active_links_from_db():
     try:
         return get_querry_result("SELECT source_url from vehicles_data WHERE activity = true;")
+    except Exception as _ex:
+        print('Error in get_active_links from db', _ex)
+        return None
+
+
+# возвращает массив неактивных ссылок из БД
+def get_unactive_links_from_db():
+    try:
+        return get_querry_result("SELECT source_url from vehicles_data WHERE activity = false;")
     except Exception as _ex:
         print('Error in get_active_links from db', _ex)
         return None
@@ -370,7 +379,7 @@ def write_productdata_to_db(product_data):
 
 
 # отмечает товар неактивым в БД по его сслыке
-def edit_product_activity_in_db(local_link):
+def edit_product_activity_in_db(local_link, activity_status=False):
     # получаем соединение
     connection = get_connection_to_db()
     # если соединение установлено успешно
@@ -381,29 +390,37 @@ def edit_product_activity_in_db(local_link):
             cursor.execute("SELECT EXISTS(SELECT relname FROM pg_class WHERE relname=%s)", (table_name,))
             table_exists = cursor.fetchone()[0]
             if table_exists:
-                locals_li = []
-                # отметка товара неактивным в БД
-                cursor.execute(
-                    "UPDATE vehicles_data SET activity = false WHERE source_url = "
-                    f"'{local_link}';"
-                )
-                # установка даты, с которой товар стал неактивен в БД
-                cursor.execute(
-                    "UPDATE vehicles_data SET unactive_since = NOW() WHERE activity = false AND unactive_since is NULL;"
-                )
-                # удаление товаров по истечению одного дня после отметки их неактивными
-                cursor.execute(
-                    "DELETE FROM vehicles_data WHERE unactive_since <= NOW() - INTERVAL '1 day';"
-                )
+                if activity_status:
+                    # отметка товара активным в БД
+                    cursor.execute(
+                        "UPDATE vehicles_data SET activity = true WHERE source_url = "
+                        f"'{local_link}';"
+                    )
+
+                if not activity_status:
+                    # отметка товара неактивным в БД
+                    cursor.execute(
+                        "UPDATE vehicles_data SET activity = false WHERE source_url = "
+                        f"'{local_link}';"
+                    )
+                    # установка даты, с которой товар стал неактивен в БД
+                    cursor.execute(
+                        "UPDATE vehicles_data SET unactive_since = NOW() WHERE activity = false AND unactive_since is "
+                        "NULL;"
+                    )
+                    # удаление товаров по истечению одного дня после отметки их неактивными
+                    cursor.execute(
+                        "DELETE FROM vehicles_data WHERE unactive_since <= NOW() - INTERVAL '1 day';"
+                    )
             else:
                 print(f"[PostGreSQL INFO] Error while trying to read {table_name}. {table_name} doesn't exist.")
                 connection.close()
                 return None
+
         connection.commit()
         # прикрываем соединение
         connection.close()
         print("[PostGreSQL INFO] Connection closed.")
-        return locals_li
     else:
         print("[PostGreSQL INFO] Error, couldn't get connection...")
         return None
@@ -554,7 +571,7 @@ def update_final_prices():
                     custom_clearance_rubles = 0
 
                 # SQL запрос на обновление цен
-                query = f"UPDATE vehicles_data SET price_brutto_rubles = {brutto_price_rubles}, commission_price_rubles" \
+                query = f"UPDATE vehicles_data SET price_brutto_rubles = {brutto_price_rubles}, commission_price_rubles"\
                         f" = {comission_price_rubles}, delivery_price_rubles = {delivery_price_rubles}, " \
                         f"customs_clearance_price = {custom_clearance_rubles} WHERE id = '{product_id}';"
 
@@ -602,7 +619,7 @@ def write_data_to_xlsx():
                     try:
                         worksheet[f"{column_letter}{row_index}"] = str(cell_value)
                     except Exception as _ex:
-                        print('[XLSX FILE] could\'t write cell value, string error.')
+                        print('[XLSX FILE] could\'t write cell value, string error.', _ex)
                     worksheet[f"BF{row_index}"] = str(euro_rate)
 
             # сохранение файла
