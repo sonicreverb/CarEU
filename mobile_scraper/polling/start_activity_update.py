@@ -10,17 +10,20 @@ def validate_links_activity():
     total_links = len(links)
     cntr = 1
     for url in links:
-        soup = get_htmlsoup(url)
-        tag404 = soup.find('h1', string="Страница не найдена")
+        try:
+            soup = get_htmlsoup(url)
+            tag404 = soup.find('h1', text="Страница не найдена")
 
-        if not tag404:
-            edit_product_activity_in_db(url, True)
-            print(f"[UNACTIVE LINKS VALIDATION] {cntr}/{total_links}. {not tag404} - {url}")
+            if not tag404:
+                edit_product_activity_in_db(url, True)
+                print(f"[UNACTIVE LINKS VALIDATION] {cntr}/{total_links}. {not tag404} - {url}")
 
-        else:
-            print(f"[UNACTIVE LINKS VALIDATION] {cntr}/{total_links}. {not tag404} - {url}")
+            else:
+                print(f"[UNACTIVE LINKS VALIDATION] {cntr}/{total_links}. {not tag404} - {url}")
 
-        cntr += 1
+            cntr += 1
+        except Exception as _ex:
+            print(f"[UNACTIVE LINKS VALIDATION] Error: {_ex}")
 
 
 while True:

@@ -7,11 +7,12 @@ from bs4 import BeautifulSoup
 from main import BASE_DIR
 from mobile_scraper.scraper_main import get_htmlsoup, get_data, create_driver
 from mobile_scraper.database.database_main import write_productdata_to_db, get_local_links_from_db,\
-    write_data_to_xlsx, output_filename, get_active_names_from_db, edit_product_activity_in_db
+    write_data_to_xlsx, get_active_names_from_db, edit_product_activity_in_db
 
 HOST = "https://www.mobile.de"
 
 
+# возвращает все ссылки на товары со страницы
 def get_product_links_from_page(url, flag_upd_activity=False):
     soup = get_htmlsoup(url)
     if flag_upd_activity:
@@ -39,6 +40,7 @@ def get_product_links_from_page(url, flag_upd_activity=False):
             print('warning: next page link not found', exc)
 
 
+# итератор по ссылкам категорий для get_product_links_from_page
 def get_all_active_links(flag_upd_activity=False):
     if flag_upd_activity:
         txt_name = 'upd_links.txt'
@@ -123,8 +125,8 @@ def upload_updtable_to_ftp():
     ftp_server = 'careu.ru'
     ftp_username = 'pikprice_123'
     ftp_password = 'u6M&k9J4'
-    remote_file_path = output_filename
-    local_file_path = os.path.join(BASE_DIR, 'mobile_scraper', 'database', output_filename)
+    remote_file_path = 'output.xlsx'
+    local_file_path = os.path.join(BASE_DIR, 'mobile_scraper', 'database', remote_file_path)
 
     # подключение к FTP серверу
     with ftplib.FTP(ftp_server, ftp_username, ftp_password) as ftp:
@@ -196,6 +198,7 @@ def update_products_activity(flag_upd_activity=False):
     return upd_links
 
 
+# запуск сессии парсинга
 def run_updater():
     # получаем ссылки для парсинга
     upd_links = update_products_activity()
@@ -221,5 +224,5 @@ def run_updater():
                     write_data_to_xlsx()
                     upload_updtable_to_ftp()
 
-        except Exception as exc:
-            print(exc, "in updater.py line 196")
+        except Exception as _ex:
+            print(_ex, "in updater.py line 196")

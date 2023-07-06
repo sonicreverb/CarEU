@@ -209,7 +209,6 @@ def write_productdata_to_db(product_data):
         with connection.cursor() as cursor:
 
             # ОСНОВНАЯ ИНФОРМАЦИЯ
-            # name = ascii(product_data['Title'])[1:-1]
             name = product_data['Title']
             url = product_data['URL']
             brutto_price = product_data['BruttoPrice']
@@ -623,7 +622,7 @@ def write_data_to_xlsx():
                     worksheet[f"BF{row_index}"] = str(euro_rate)
 
             # сохранение файла
-            filename = osph.join(BASE_DIR, 'mobile_scraper', 'database', output_filename)
+            filename = osph.join(BASE_DIR, 'mobile_scraper', 'database', 'output.xlsx')
             workbook.save(filename)
 
         connection.commit()

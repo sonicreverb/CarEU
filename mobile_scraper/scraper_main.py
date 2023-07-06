@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from googletrans import Translator
 
 
+# возвращает driver
 def create_driver():
     chrome_options = webdriver.ChromeOptions()
     prefs = {"profile.managed_default_content_settings.images": 2}
@@ -16,6 +17,7 @@ def create_driver():
     return driver
 
 
+# возвращает soup указанной страницы
 def get_htmlsoup(url):
     driver = create_driver()
 
@@ -31,6 +33,7 @@ def get_htmlsoup(url):
         return 'error invalid url'
 
 
+# возвращает словарь product_data с данными о товаре указанной страницы
 def get_data(url):
     try:
         soup = get_htmlsoup(url)
