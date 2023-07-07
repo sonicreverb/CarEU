@@ -288,5 +288,9 @@ def start_activity_update():
     while True:
         get_all_active_links(flag_upd_activity=True)
         update_products_activity(flag_upd_activity=True)
+        last_upd_time = time.time()
         start_activity_validation()
+
+        if time.time() - last_upd_time < 3600:
+            time.sleep(3600 - time.time() - last_upd_time)
         print(f"\n[ACTIVITY UPDATER] Активность товаров успешна обновлена: {datetime.datetime.now()}")
