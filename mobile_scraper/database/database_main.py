@@ -185,7 +185,8 @@ def get_active_links_from_db():
 # возвращает массив неактивных ссылок из БД
 def get_unactive_links_from_db():
     try:
-        return get_querry_result("SELECT source_url from vehicles_data WHERE activity = false;")
+        return get_querry_result("SELECT source_url from vehicles_data WHERE activity = false AND activity_validation "
+                                 "= false;")
     except Exception as _ex:
         print('Error in get_active_links from db', _ex)
         return None
@@ -380,7 +381,7 @@ def write_productdata_to_db(product_data):
 
 
 # отмечает товар неактивым в БД по его сслыке
-def edit_product_activity_in_db(local_link, activity_status=False):
+def edit_product_activity_in_db(local_link, activity_status=False, unactivity_valid=False):
     # получаем соединение
     connection = get_connection_to_db()
     # если соединение установлено успешно
@@ -409,6 +410,12 @@ def edit_product_activity_in_db(local_link, activity_status=False):
                         "UPDATE vehicles_data SET unactive_since = NOW() WHERE activity = false AND unactive_since is "
                         "NULL;"
                     )
+
+                if unactivity_valid:
+                    cursor.execute(
+                        "UPDATE vehicles_data SET activity_validation = true WHERE source_url = "
+                        f"'{local_link}';"
+                    )
             else:
                 print(f"[PostGreSQL INFO] Error while trying to read {table_name}. {table_name} doesn't exist.")
                 connection.close()
@@ -432,7 +439,8 @@ def delete_unactive_positions():
     if connection:
         with connection.cursor() as cursor:
             # выполнение БД запроса
-            cursor.execute("DELETE FROM vehicles_data WHERE unactive_since <= NOW() - INTERVAL '1 day';")
+            cursor.execute("DELETE FROM vehicles_data WHERE unactive_since <= NOW() - INTERVAL '1 day' AND "
+                           "activity_validation = true;")
 
             print("[PostGreSQL INFO] Data was deleted successfully.")
 
