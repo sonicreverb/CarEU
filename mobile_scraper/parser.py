@@ -1,20 +1,22 @@
-﻿import os.path
+﻿import datetime
+import os.path
 import time
 import ftplib
 
 from selenium.webdriver.support.select import Select
 from bs4 import BeautifulSoup
-from main import BASE_DIR
-from mobile_scraper.scraper_main import get_htmlsoup, get_data, create_driver
-from mobile_scraper.database.database_main import write_productdata_to_db, get_local_links_from_db,\
-    write_data_to_xlsx, get_active_names_from_db, edit_product_activity_in_db
+from mobile_scraper.scraper_main import get_htmlsoup, get_data, create_driver, kill_driver
+from mobile_scraper.database.database_main import write_productdata_to_db, get_local_links_from_db, update_tcalc, \
+    write_data_to_xlsx, get_active_names_from_db, edit_product_activity_in_db, get_unactive_links_from_db, \
+    delete_unactive_positions
 
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 HOST = "https://www.mobile.de"
 
 
 # возвращает все ссылки на товары со страницы
-def get_product_links_from_page(url, flag_upd_activity=False):
-    soup = get_htmlsoup(url)
+def get_product_links_from_page(driver, flag_upd_activity=False):
+    soup = get_htmlsoup(driver)
     if flag_upd_activity:
         txt_name = 'upd_links.txt'
     else:
@@ -28,14 +30,18 @@ def get_product_links_from_page(url, flag_upd_activity=False):
                 al_output.write(HOST + link.get('href') + "\n")
             except Exception as exc:
                 print('error: links not found', exc)
-    print("[GET ACTIVE LINKS INFO]", len(soup_a_li), url)
+    print(f"({str(datetime.datetime.now())[:-7]}, {len(soup_a_li)})\n")
 
     # переход на следующую страницу
     if soup.find('a', class_='pagination-nav pagination-nav-right btn btn--muted btn--s'):
         try:
-            get_product_links_from_page(HOST + soup.find('a', class_='pagination-nav pagination-nav-right btn '
-                                                                     'btn--muted btn--s').get('href'),
-                                        flag_upd_activity)
+            new_url = HOST + soup.find('a', class_='pagination-nav pagination-nav-right btn '
+                                                   'btn--muted btn--s').get('href')
+            # переключаем вкладку
+            print(f"[GET ACTIVE LINKS INFO] {new_url}")
+            driver.execute_script('window.location.href = arguments[0];', new_url)
+            get_product_links_from_page(driver, flag_upd_activity)
+
         except Exception as exc:
             print('warning: next page link not found', exc)
 
@@ -51,9 +57,18 @@ def get_all_active_links(flag_upd_activity=False):
     with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", txt_name), "w"):
         pass
 
+    # создаём и открываем окно браузера
+    driver = create_driver()
+    driver.get('https://www.mobile.de/ru')
     with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", "filtered_links.txt")) as fl_input:
         for filtered_link in fl_input:
-            get_product_links_from_page(filtered_link, flag_upd_activity)
+            try:
+                print(f"[GET ACTIVE LINKS INFO] {filtered_link}", end="")
+                driver.execute_script('window.location.href = arguments[0];', filtered_link)
+                get_product_links_from_page(driver, flag_upd_activity)
+            except Exception as _ex:
+                print('[GET ACTIVE LINKS INFO]', _ex)
+        kill_driver(driver)
 
 
 def get_models_dict():
@@ -199,30 +214,75 @@ def update_products_activity(flag_upd_activity=False):
 
 
 # запуск сессии парсинга
-def run_updater():
-    # получаем ссылки для парсинга
-    upd_links = update_products_activity()
-    len_upd_links = len(upd_links)
-    last_upd_time = time.time()
-    product_counter = 1
+def start_parser():
+    while True:
+        # парсим текущие активные ссылки товаров
+        get_all_active_links()
 
-    for link in upd_links:
-        try:
-            # непосредственно парсинг товаров
-            print(f"\n[UPDATER INFO] {product_counter}/{len_upd_links}. {link}")
-            product_data = get_data(link)
+        # формируем валидные ссылки для парсинга
+        upd_links = update_products_activity()
+        len_upd_links = len(upd_links)
+        last_upd_time = time.time()
+        product_counter = 1
 
-            active_names = get_active_names_from_db()
+        # создаём и открываем окно браузера
+        driver = create_driver()
+        driver.get(HOST)
+        for link in upd_links:
+            try:
+                # непосредственно парсинг товаров
+                print(f"\n[UPDATER INFO] {product_counter}/{len_upd_links}. {link}")
+                driver.execute_script('window.location.href = arguments[0];', link)
+                soup = get_htmlsoup(driver)
+                product_data = get_data(soup, link)
+                active_names = get_active_names_from_db()
 
-            if product_data and (product_data['Title'] not in active_names):
-                write_productdata_to_db(product_data)
-                product_counter += 1
+                # проверка на дубликат
+                if product_data and (product_data['Title'] not in active_names):
+                    write_productdata_to_db(product_data)
+                    product_counter += 1
 
-                # отправка данных на FTP сервер каждую тысячу товаров
-                if product_counter % 100 == 0 or time.time() - last_upd_time > 1800:
-                    last_upd_time = time.time()
-                    write_data_to_xlsx()
-                    upload_updtable_to_ftp()
+                    # отправка данных на FTP сервер каждые 300 товаров, или по истечении двух часов
+                    if product_counter % 300 == 0 or time.time() - last_upd_time > 7200:
+                        last_upd_time = time.time()
+                        write_data_to_xlsx()
+                        upload_updtable_to_ftp()
+            except Exception as _ex:
+                print(_ex, "in updater.py line 196")
 
-        except Exception as _ex:
-            print(_ex, "in updater.py line 196")
+        kill_driver(driver)
+
+
+# поштучно проверяет активность спорных товаров на сайте по его ссылке
+def start_activity_validation():
+    while True:
+        links = get_unactive_links_from_db()
+        total_links = len(links)
+        cntr = 1
+        for url in links:
+            try:
+                soup = get_htmlsoup(url)
+                tag404 = soup.find('h1', text="Страница не найдена")
+
+                if not tag404:
+                    edit_product_activity_in_db(url, True)
+                    print(f"[UNACTIVE LINKS VALIDATION] {cntr}/{total_links}. {not tag404} - {url}")
+
+                else:
+                    print(f"[UNACTIVE LINKS VALIDATION] {cntr}/{total_links}. {not tag404} - {url}")
+
+                cntr += 1
+            except Exception as _ex:
+                print(f"[UNACTIVE LINKS VALIDATION] Error: {_ex}")
+        delete_unactive_positions()
+
+
+# запускает сессию обновления активности товаров
+def start_activity_update():
+    while True:
+        update_tcalc()
+        print(f"\n[ACTIVITY UPDATER] Таможенный калькулятор успешно обновлен: {datetime.datetime.now()}")
+
+        get_all_active_links(flag_upd_activity=True)
+        update_products_activity(flag_upd_activity=True)
+        print(f"\n[ACTIVITY UPDATER] Активность товаров успешна обновлена: {datetime.datetime.now()}")

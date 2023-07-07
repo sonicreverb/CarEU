@@ -1,15 +1,15 @@
 import datetime
-
+import os.path
 import psycopg2
-# import requests
 import re
 import openpyxl
 import os.path as osph
 
 from openpyxl.utils import get_column_letter
-from main import BASE_DIR
-from mobile_scraper.database.config import host, user, password, db_name, output_filename
+from mobile_scraper.database.config import host, user, password, db_name
 from pycbrf import ExchangeRates
+
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 
 # получение соеднения с БД
@@ -407,14 +407,32 @@ def edit_product_activity_in_db(local_link, activity_status=False):
                         "UPDATE vehicles_data SET unactive_since = NOW() WHERE activity = false AND unactive_since is "
                         "NULL;"
                     )
-                    # удаление товаров по истечению одного дня после отметки их неактивными
-                    cursor.execute(
-                        "DELETE FROM vehicles_data WHERE unactive_since <= NOW() - INTERVAL '1 day';"
-                    )
             else:
                 print(f"[PostGreSQL INFO] Error while trying to read {table_name}. {table_name} doesn't exist.")
                 connection.close()
                 return None
+
+        connection.commit()
+        # прикрываем соединение
+        connection.close()
+        print("[PostGreSQL INFO] Connection closed.")
+    else:
+        print("[PostGreSQL INFO] Error, couldn't get connection...")
+        return None
+
+
+# удаляет неактивные позиции в БД по истечении суток
+def delete_unactive_positions():
+    # получаем соединение
+    connection = get_connection_to_db()
+
+    # если соединение установлено успешно
+    if connection:
+        with connection.cursor() as cursor:
+            # выполнение БД запроса
+            cursor.execute("DELETE FROM vehicles_data WHERE unactive_since <= NOW() - INTERVAL '1 day';")
+
+            print("[PostGreSQL INFO] Data was deleted successfully.")
 
         connection.commit()
         # прикрываем соединение
@@ -553,7 +571,7 @@ def update_final_prices():
                 if match:
                     volume = int(match.group())
 
-                brutto_price_rubles = (int(brutto) * euro_rate)
+                brutto_price_rub = (int(brutto) * euro_rate)
 
                 # Цена с комиссией =((нетто + брутто*0,1)+(брутто*0,07+300))*курсевро
                 comission_price_rubles = ((int(netto) + int(brutto) * 0.1) +
@@ -570,7 +588,7 @@ def update_final_prices():
                     custom_clearance_rubles = 0
 
                 # SQL запрос на обновление цен
-                query = f"UPDATE vehicles_data SET price_brutto_rubles = {brutto_price_rubles}, commission_price_rubles"\
+                query = f"UPDATE vehicles_data SET price_brutto_rubles = {brutto_price_rub}, commission_price_rubles" \
                         f" = {comission_price_rubles}, delivery_price_rubles = {delivery_price_rubles}, " \
                         f"customs_clearance_price = {custom_clearance_rubles} WHERE id = '{product_id}';"
 

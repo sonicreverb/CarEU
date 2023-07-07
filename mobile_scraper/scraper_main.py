@@ -9,35 +9,32 @@ from googletrans import Translator
 
 # возвращает driver
 def create_driver():
-    chrome_options = webdriver.ChromeOptions()
-    prefs = {"profile.managed_default_content_settings.images": 2}
-    chrome_options.add_experimental_option("prefs", prefs)
+    print('[DRIVER INFO] Driver created successfully.\n')
+    return webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-    return driver
+
+# закрывает все окна и завершает сеанс driver
+def kill_driver(driver):
+    driver.close()
+    driver.quit()
+    print('[DRIVER INFO] Driver was closed successfully.\n')
 
 
 # возвращает soup указанной страницы
-def get_htmlsoup(url):
-    driver = create_driver()
-
+def get_htmlsoup(driver):
     try:
-        driver.get(url)
-
         soup = BeautifulSoup(driver.page_source, 'html.parser')
-        driver.close()
         return soup
 
     except Exception as exc:
-        print(exc, url)
-        return 'error invalid url'
+        print(exc)
+        return None
 
 
 # возвращает словарь product_data с данными о товаре указанной страницы
-def get_data(url):
+def get_data(soup, url=None):
     try:
-        soup = get_htmlsoup(url)
-        if soup == 'error invalid url':
+        if not soup:
             return None
 
         title = soup.find('h1', class_='h2 g-col-8').get_text()
