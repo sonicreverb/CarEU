@@ -259,9 +259,14 @@ def start_activity_validation():
         links = get_unactive_links_from_db()
         total_links = len(links)
         cntr = 1
+
+        # создаём и открываем окно браузера
+        driver = create_driver()
+        driver.get(HOST)
         for url in links:
             try:
-                soup = get_htmlsoup(url)
+                driver.execute_script('window.location.href = arguments[0];', url)
+                soup = get_htmlsoup(driver)
                 tag404 = soup.find('h1', text="Страница не найдена")
 
                 if not tag404:
@@ -275,6 +280,7 @@ def start_activity_validation():
             except Exception as _ex:
                 print(f"[UNACTIVE LINKS VALIDATION] Error: {_ex}")
         delete_unactive_positions()
+        kill_driver(driver)
 
 
 # запускает сессию обновления активности товаров
