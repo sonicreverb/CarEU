@@ -9,5 +9,5 @@ if __name__ == "__main__":
     tcalc_update_process = multiprocessing.Process(target=update_tcalc)
 
     parser_process.start()
-    # tcalc_update_process.start()
-    # activity_update_process.start()
+    tcalc_update_process.start()
+    activity_update_process.start()
