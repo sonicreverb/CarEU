@@ -1,5 +1,7 @@
 import datetime
 import os.path
+import time
+
 import psycopg2
 import re
 import openpyxl
@@ -9,7 +11,7 @@ from openpyxl.utils import get_column_letter
 from mobile_scraper.database.config import host, user, password, db_name
 from pycbrf import ExchangeRates
 
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
 
 # получение соеднения с БД
@@ -507,43 +509,47 @@ def create_tcalc():
         print("[PostGreSQL INFO] Error, couldn't get connection...")
 
 
-# обновление таможенного калькулятора согласно текузему курсу
+# обновление таможенного калькулятора согласно текущему курсу
 def update_tcalc():
-    # получаем соединение
-    connection = get_connection_to_db()
+    while True:
+        # получаем соединение
+        connection = get_connection_to_db()
 
-    # если соединение установлено успешно
-    if connection:
-        with connection.cursor() as cursor:
-            # получаем текущий курс евро
-            euro_rate = get_euro_rate()
+        # если соединение установлено успешно
+        if connection:
+            with connection.cursor() as cursor:
+                # получаем текущий курс евро
+                euro_rate = get_euro_rate()
 
-            for vol in range(500, 8200 + 1):
-                if vol < 1000:
-                    rate = 1.5
-                elif vol < 1501:
-                    rate = 1.7
-                elif vol < 1801:
-                    rate = 2.5
-                elif vol < 2301:
-                    rate = 2.7
-                elif vol < 3001:
-                    rate = 3
-                else:
-                    rate = 3.6
+                for vol in range(500, 8200 + 1):
+                    if vol < 1000:
+                        rate = 1.5
+                    elif vol < 1501:
+                        rate = 1.7
+                    elif vol < 1801:
+                        rate = 2.5
+                    elif vol < 2301:
+                        rate = 2.7
+                    elif vol < 3001:
+                        rate = 3
+                    else:
+                        rate = 3.6
 
-                # SQL запрос
-                query = f"UPDATE tcalc SET sumrub = {vol * rate * euro_rate + 17200} WHERE volume = {vol};"
-                # print(query, (vol, rate, vol*rate, vol*rate*euro_rate + 17200))
-                cursor.execute(query)
+                    # SQL запрос
+                    query = f"UPDATE tcalc SET sumrub = {vol * rate * euro_rate + 17200} WHERE volume = {vol};"
+                    # print(query, (vol, rate, vol*rate, vol*rate*euro_rate + 17200))
+                    cursor.execute(query)
 
-        connection.commit()
-        # прикрываем соединение
-        connection.close()
-        print('[PostGreSQL INFO] tcalc UPDATE COMPLETE.')
-        print("[PostGreSQL INFO] Connection closed.")
-    else:
-        print("[PostGreSQL INFO] Error, couldn't get connection...")
+            connection.commit()
+            # прикрываем соединение
+            connection.close()
+            print('[PostGreSQL INFO] tcalc UPDATE COMPLETE.')
+            print("[PostGreSQL INFO] Connection closed.")
+            print(f"\n[TCALC UPDATER] Таможенный калькулятор успешно обновлен: {datetime.datetime.now()}")
+            time.sleep(30*60)
+        else:
+            print("[PostGreSQL INFO] Error, couldn't get connection...")
+            print(f"\n[TCALC UPDATER] ERROR! Не удалось обновить таможенный калькулятор.")
 
 
 # обновление цен в таблице

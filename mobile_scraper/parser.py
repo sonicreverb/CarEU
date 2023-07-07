@@ -6,7 +6,7 @@ import ftplib
 from selenium.webdriver.support.select import Select
 from bs4 import BeautifulSoup
 from mobile_scraper.scraper_main import get_htmlsoup, get_data, create_driver, kill_driver
-from mobile_scraper.database.database_main import write_productdata_to_db, get_local_links_from_db, update_tcalc, \
+from mobile_scraper.database.database_main import write_productdata_to_db, get_local_links_from_db, \
     write_data_to_xlsx, get_active_names_from_db, edit_product_activity_in_db, get_unactive_links_from_db, \
     delete_unactive_positions
 
@@ -243,7 +243,7 @@ def start_parser():
                     product_counter += 1
 
                     # отправка данных на FTP сервер каждые 300 товаров, или по истечении двух часов
-                    if product_counter % 300 == 0 or time.time() - last_upd_time > 7200:
+                    if product_counter % 3000 == 0 or time.time() - last_upd_time > 3600:
                         last_upd_time = time.time()
                         write_data_to_xlsx()
                         upload_updtable_to_ftp()
@@ -286,9 +286,7 @@ def start_activity_validation():
 # запускает сессию обновления активности товаров
 def start_activity_update():
     while True:
-        update_tcalc()
-        print(f"\n[ACTIVITY UPDATER] Таможенный калькулятор успешно обновлен: {datetime.datetime.now()}")
-
         get_all_active_links(flag_upd_activity=True)
         update_products_activity(flag_upd_activity=True)
+        start_activity_validation()
         print(f"\n[ACTIVITY UPDATER] Активность товаров успешна обновлена: {datetime.datetime.now()}")
