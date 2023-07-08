@@ -554,7 +554,7 @@ def update_tcalc():
             print('[PostGreSQL INFO] tcalc UPDATE COMPLETE.')
             print("[PostGreSQL INFO] Connection closed.")
             print(f"\n[TCALC UPDATER] Таможенный калькулятор успешно обновлен: {datetime.datetime.now()}")
-            time.sleep(30*60)
+            time.sleep(30 * 60)
         else:
             print("[PostGreSQL INFO] Error, couldn't get connection...")
             print(f"\n[TCALC UPDATER] ERROR! Не удалось обновить таможенный калькулятор.")
@@ -617,8 +617,8 @@ def update_final_prices():
         print("[PostGreSQL INFO] Error, couldn't get connection...")
 
 
-# запись данных из БД в csv файл
-def write_data_to_xlsx():
+# запись данных из БД в xlsx файл querry - запрос в БД, filename - название файла в который запись
+def write_data_to_xlsx(querry, filename):
     # получаем соединение
     connection = get_connection_to_db()
 
@@ -629,7 +629,7 @@ def write_data_to_xlsx():
     if connection:
         with connection.cursor() as cursor:
             # SQL запрос
-            cursor.execute("SELECT * FROM vehicles_data;")
+            cursor.execute(querry)
             rows = cursor.fetchall()
 
             # создание XLSX-файла
@@ -654,8 +654,8 @@ def write_data_to_xlsx():
                     worksheet[f"BF{row_index}"] = str(euro_rate)
 
             # сохранение файла
-            filename = osph.join(BASE_DIR, 'mobile_scraper', 'database', 'output.xlsx')
-            workbook.save(filename)
+            filename_path = osph.join(BASE_DIR, 'mobile_scraper', 'database', filename)
+            workbook.save(filename_path)
 
         connection.commit()
         # прикрываем соединение
@@ -664,3 +664,37 @@ def write_data_to_xlsx():
         print("[XLSX FILE] XLSX file was updated successfully.")
     else:
         print("[PostGreSQL INFO] Error, couldn't get connection...")
+
+
+# записывает все данные из БД в 5 файлов формата xlsx
+def upload_db_data_to_xlsx():
+    makes_category1 = ['Audi', 'Renault', 'Saab']
+    querry1 = "SELECT * FROM vehicles_data WHERE " + ' OR '.join(
+        ["make = '{}'".format(make) for make in makes_category1]) + ';'
+    write_data_to_xlsx(querry1, 'output1.xlsx')
+
+    makes_category2 = ['Mercedes-Benz', 'Mazda', 'MINI', 'Mitsubishi']
+    querry2 = "SELECT * FROM vehicles_data WHERE " + ' OR '.join(
+        ["make = '{}'".format(make) for make in makes_category2]) + ';'
+    write_data_to_xlsx(querry2, 'output2.xlsx')
+
+    makes_category3 = ['Skoda', 'Opel', 'Nissan', 'Peugeot', 'Porsche', 'Smart', 'Subaru', 'Suzuki', 'Isuzu',
+                       'Lamborghini',
+                       'KTM', 'Cobra', 'Corvette', 'Ferrari', 'Koenigsegg', 'Lotus', 'Maserati', 'Maybach', 'McLaren',
+                       'Plymouth', 'Pontiac', 'Rolls-Royce', 'Ruf', 'Bugatti']
+    querry3 = "SELECT * FROM vehicles_data WHERE " + ' OR '.join(
+        ["make = '{}'".format(make) for make in makes_category3]) + ';'
+    write_data_to_xlsx(querry3, 'output3.xlsx')
+
+    makes_category4 = ['BMW', 'Volvo', 'Toyota', 'ALPINA', 'Alfa Romeo', 'Aston Martin', 'Bentley', 'Cadillac',
+                       'Chevrolet',
+                       'Chrysler', 'Citroën', 'Dodge', 'Fiat', 'Infiniti', 'Honda', 'Hyundai']
+    querry4 = "SELECT * FROM vehicles_data WHERE " + ' OR '.join(
+        ["make = '{}'".format(make) for make in makes_category4]) + ';'
+    write_data_to_xlsx(querry4, 'output4.xlsx')
+
+    makes_category5 = ['Land Rover', 'Lexus', 'Lincoln', 'Jaguar', 'Jeep', 'Kia', 'Volkswagen', 'Ford']
+    querry5 = "SELECT * FROM vehicles_data WHERE " + ' OR '.join(
+        ["make = '{}'".format(make) for make in makes_category5]) + ';'
+    write_data_to_xlsx(querry5, 'output5.xlsx')
+

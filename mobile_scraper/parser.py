@@ -7,7 +7,7 @@ from selenium.webdriver.support.select import Select
 from bs4 import BeautifulSoup
 from mobile_scraper.scraper_main import get_htmlsoup, get_data, create_driver, kill_driver
 from mobile_scraper.database.database_main import write_productdata_to_db, get_local_links_from_db, \
-    write_data_to_xlsx, get_active_names_from_db, edit_product_activity_in_db, get_unactive_links_from_db, \
+    upload_db_data_to_xlsx, get_active_names_from_db, edit_product_activity_in_db, get_unactive_links_from_db, \
     delete_unactive_positions
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -135,12 +135,12 @@ def get_models_dict():
     return {"Producer": upload_make, "Models": upload_model, "ModelID": upload_model_id, "URL": upload_links}
 
 
-# загрузка данных из БД на ftp
-def upload_updtable_to_ftp():
+# загрузка данных из таблицы на ftp
+def upload_updtable_to_ftp(filename):
     ftp_server = 'careu.ru'
     ftp_username = 'pikprice_123'
     ftp_password = 'u6M&k9J4'
-    remote_file_path = 'output.xlsx'
+    remote_file_path = filename
     local_file_path = os.path.join(BASE_DIR, 'mobile_scraper', 'database', remote_file_path)
 
     # подключение к FTP серверу
@@ -151,6 +151,15 @@ def upload_updtable_to_ftp():
             # загрузка файла на сервер
             ftp.storbinary(f'STOR {remote_file_path}', file)
             print('[FTP INFO] Result table was uploaded successfully!')
+
+
+# загружает все пять таблиц output на сервер
+def upload_db_to_ftp():
+    upload_updtable_to_ftp('output1.xlsx')
+    upload_updtable_to_ftp('output2.xlsx')
+    upload_updtable_to_ftp('output3.xlsx')
+    upload_updtable_to_ftp('output4.xlsx')
+    upload_updtable_to_ftp('output5.xlsx')
 
 
 # находит все индексы char, которые находятся в string
@@ -252,8 +261,9 @@ def start_parser():
                     # отправка данных на FTP сервер каждые 300 товаров, или по истечении двух часов
                     if product_counter % 3000 == 0 or time.time() - last_upd_time > 3600:
                         last_upd_time = time.time()
-                        write_data_to_xlsx()
-                        upload_updtable_to_ftp()
+                        upload_db_data_to_xlsx()
+                        upload_db_to_ftp()
+
                 else:
                     len_upd_links -= 1
                     invalid_links_file = open(os.path.join(BASE_DIR, 'mobile_scraper', 'links_data',
