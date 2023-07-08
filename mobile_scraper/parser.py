@@ -197,8 +197,15 @@ def update_products_activity(flag_upd_activity=False):
     short_active_set = set(short_active_li)
     print("active set done")
 
+    # создаём множенство невалидных ссылок (не подходят под условие загрузки в бд <8 изображений и т.д)
+    with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", 'invalid_links.txt'), "r") as inp:
+        invalid_li = []
+        for line in inp:
+            invalid_li.append(line.strip())
+    invalid_set = set(invalid_li)
+
     # вычитаем множества и получаем ссылки необходимо спарсить и дозагрузить в таблице
-    upd_links = active_set - local_set
+    upd_links = (active_set - local_set) - invalid_set
     print('total upd links: ', len(upd_links))
 
     # неактивные ссылки отмечаем... неактивными)
@@ -247,6 +254,13 @@ def start_parser():
                         last_upd_time = time.time()
                         write_data_to_xlsx()
                         upload_updtable_to_ftp()
+                else:
+                    len_upd_links -= 1
+                    invalid_links_file = open(os.path.join(BASE_DIR, 'mobile_scraper', 'links_data',
+                                                           'invalid_links.txt'), 'a+', encoding='utf-8')
+                    invalid_links_file.write(link + "\n")
+                    invalid_links_file.close()
+
             except Exception as _ex:
                 print(_ex, "in updater.py line 196")
 
@@ -255,32 +269,32 @@ def start_parser():
 
 # поштучно проверяет активность спорных товаров на сайте по его ссылке
 def start_activity_validation():
-    while True:
-        links = get_unactive_links_from_db()
-        total_links = len(links)
-        cntr = 1
+    links = get_unactive_links_from_db()
+    total_links = len(links)
+    cntr = 1
 
-        # создаём и открываем окно браузера
-        driver = create_driver()
-        driver.get(HOST)
-        for url in links:
-            try:
-                driver.execute_script('window.location.href = arguments[0];', url)
-                soup = get_htmlsoup(driver)
-                tag404 = soup.find('h1', text="Страница не найдена")
+    # создаём и открываем окно браузера
+    driver = create_driver()
+    driver.get(HOST)
+    for url in links:
+        try:
+            driver.execute_script('window.location.href = arguments[0];', url)
+            soup = get_htmlsoup(driver)
+            tag404 = soup.find('h1', text="Страница не найдена")
 
-                if not tag404:
-                    edit_product_activity_in_db(url, True)
-                    print(f"[UNACTIVE LINKS VALIDATION] {cntr}/{total_links}. {not tag404} - {url}")
+            if not tag404:
+                edit_product_activity_in_db(url, True)
+                print(f"[UNACTIVE LINKS VALIDATION] {cntr}/{total_links}. {not tag404} - {url}")
 
-                else:
-                    print(f"[UNACTIVE LINKS VALIDATION] {cntr}/{total_links}. {not tag404} - {url}")
+            else:
+                edit_product_activity_in_db(url, unactivity_valid=True)
+                print(f"[UNACTIVE LINKS VALIDATION] {cntr}/{total_links}. {not tag404} - {url}")
 
-                cntr += 1
-            except Exception as _ex:
-                print(f"[UNACTIVE LINKS VALIDATION] Error: {_ex}")
-        delete_unactive_positions()
-        kill_driver(driver)
+            cntr += 1
+        except Exception as _ex:
+            print(f"[UNACTIVE LINKS VALIDATION] Error: {_ex}")
+    delete_unactive_positions()
+    kill_driver(driver)
 
 
 # запускает сессию обновления активности товаров
@@ -292,5 +306,5 @@ def start_activity_update():
         start_activity_validation()
 
         if time.time() - last_upd_time < 3600:
-            time.sleep(3600 - time.time() - last_upd_time)
+            time.sleep(3600 - (time.time() - last_upd_time))
         print(f"\n[ACTIVITY UPDATER] Активность товаров успешна обновлена: {datetime.datetime.now()}")
