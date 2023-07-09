@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from mobile_scraper.scraper_main import get_htmlsoup, get_data, create_driver, kill_driver
 from mobile_scraper.database.database_main import write_productdata_to_db, get_local_links_from_db, \
     upload_db_data_to_xlsx, get_active_names_from_db, edit_product_activity_in_db, get_unactive_links_from_db, \
-    delete_unactive_positions
+    delete_unactive_positions, update_final_prices
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 HOST = "https://www.mobile.de"
@@ -314,7 +314,9 @@ def start_activity_update():
         update_products_activity(flag_upd_activity=True)
         last_upd_time = time.time()
         start_activity_validation()
+        update_final_prices()
+
+        print(f"\n[ACTIVITY UPDATER] Активность товаров успешна обновлена: {datetime.datetime.now()}")
 
         if time.time() - last_upd_time < 3600:
             time.sleep(3600 - (time.time() - last_upd_time))
-        print(f"\n[ACTIVITY UPDATER] Активность товаров успешна обновлена: {datetime.datetime.now()}")

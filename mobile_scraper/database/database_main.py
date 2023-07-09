@@ -87,10 +87,13 @@ def get_querry_result(querry):
             # выполнение БД запроса
             cursor.execute(querry)
 
-            for bd_object in cursor.fetchall():
-                result.append(bytes(bd_object[0], 'utf-8').decode('unicode_escape'))
+            try:
+                for bd_object in cursor.fetchall():
+                    result.append(bytes(bd_object[0], 'utf-8').decode('unicode_escape'))
 
-            print("[PostGreSQL INFO] Data was read successfully.")
+                print("[PostGreSQL INFO] Data was read successfully.")
+            except psycopg2.ProgrammingError:
+                pass
 
         connection.commit()
         # прикрываем соединение
@@ -622,7 +625,6 @@ def write_data_to_xlsx(querry, filename):
     # получаем соединение
     connection = get_connection_to_db()
 
-    update_final_prices()
     euro_rate = get_euro_rate()
 
     # если соединение установлено успешно
@@ -650,7 +652,7 @@ def write_data_to_xlsx(querry, filename):
                     try:
                         worksheet[f"{column_letter}{row_index}"] = str(cell_value)
                     except Exception as _ex:
-                        print('[XLSX FILE] could\'t write cell value, string error.', _ex)
+                        print('[XLSX FILE] could\'t write cell value, string error.')
                     worksheet[f"BF{row_index}"] = str(euro_rate)
 
             # сохранение файла
@@ -698,3 +700,25 @@ def upload_db_data_to_xlsx():
         ["make = '{}'".format(make) for make in makes_category5]) + ';'
     write_data_to_xlsx(querry5, 'output5.xlsx')
 
+
+def refresh_models():
+    all_models_dict = read_models_from_db()
+    names = get_querry_result("SELECT name FROM vehicles_data;")
+
+    for name in names:
+        for make in all_models_dict:
+            if make in name.split():
+                product_make = make
+                for model in all_models_dict[make]:
+                    if model in name.split():
+                        product_model = model
+
+                        try:
+                            get_querry_result(f"UPDATE vehicles_data SET make = '{product_make}', model = '{product_model}'"
+                                              f" WHERE name = '{name}'")
+                            print(name, product_make, product_model)
+                        except Exception as _ex:
+                            print(_ex)
+
+
+refresh_models()
