@@ -7,7 +7,7 @@ from selenium.webdriver.support.select import Select
 from bs4 import BeautifulSoup
 from mobile_scraper.scraper_main import get_htmlsoup, get_data, create_driver, kill_driver
 from mobile_scraper.database.database_main import write_productdata_to_db, get_local_links_from_db, \
-    upload_db_data_to_xlsx, get_active_names_from_db, edit_product_activity_in_db, get_unactive_links_from_db, \
+    get_active_names_from_db, edit_product_activity_in_db, get_unactive_links_from_db, \
     delete_unactive_positions, update_final_prices
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -15,12 +15,9 @@ HOST = "https://www.mobile.de"
 
 
 # возвращает все ссылки на товары со страницы
-def get_product_links_from_page(driver, flag_upd_activity=False):
+def get_product_links_from_page(driver):
     soup = get_htmlsoup(driver)
-    if flag_upd_activity:
-        txt_name = 'upd_links.txt'
-    else:
-        txt_name = "active_links.txt"
+    txt_name = "active_links.txt"
 
     # поиск и запись в массив всех ссылок на товары со страницы
     soup_a_li = soup.find_all('a', class_='vehicle-data track-event u-block js-track-event js-track-dealer-ratings')
@@ -40,18 +37,15 @@ def get_product_links_from_page(driver, flag_upd_activity=False):
             # переключаем вкладку
             print(f"[GET ACTIVE LINKS INFO] {new_url}")
             driver.execute_script('window.location.href = arguments[0];', new_url)
-            get_product_links_from_page(driver, flag_upd_activity)
+            get_product_links_from_page(driver)
 
         except Exception as exc:
             print('warning: next page link not found', exc)
 
 
 # итератор по ссылкам категорий для get_product_links_from_page
-def get_all_active_links(flag_upd_activity=False):
-    if flag_upd_activity:
-        txt_name = 'upd_links.txt'
-    else:
-        txt_name = "active_links.txt"
+def get_all_active_links():
+    txt_name = "active_links.txt"
 
     # очистка содержимого
     with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", txt_name), "w"):
@@ -65,7 +59,7 @@ def get_all_active_links(flag_upd_activity=False):
             try:
                 print(f"[GET ACTIVE LINKS INFO] {filtered_link}", end="")
                 driver.execute_script('window.location.href = arguments[0];', filtered_link)
-                get_product_links_from_page(driver, flag_upd_activity)
+                get_product_links_from_page(driver)
             except Exception as _ex:
                 print('[GET ACTIVE LINKS INFO]', _ex)
         kill_driver(driver)
@@ -172,11 +166,8 @@ def find_all_indexes(string, char):
 
 
 # возвращает массив upd_links - уникальных ссылок для парсинга; если flag_upd_activity - отмечает неактиные ссылки в БД
-def update_products_activity(flag_upd_activity=False):
-    if flag_upd_activity:
-        txt_name = 'upd_links.txt'
-    else:
-        txt_name = "active_links.txt"
+def update_products_activity(to_del=False):
+    txt_name = "active_links.txt"
 
     # создаём множество ссылок на товары из таблицы
     local_links = get_local_links_from_db()
@@ -218,7 +209,7 @@ def update_products_activity(flag_upd_activity=False):
     print('total upd links: ', len(upd_links))
 
     # неактивные ссылки отмечаем... неактивными)
-    if flag_upd_activity:
+    if to_del:
         delete_links = short_local_set - short_active_set
         print(len(delete_links), delete_links)
         for idx in range(len(local_links)):
@@ -232,13 +223,10 @@ def update_products_activity(flag_upd_activity=False):
 # запуск сессии парсинга
 def start_parser():
     while True:
-        # парсим текущие активные ссылки товаров
-        get_all_active_links()
-
         # формируем валидные ссылки для парсинга
         upd_links = update_products_activity()
         len_upd_links = len(upd_links)
-        last_upd_time = time.time()
+        # last_upd_time = time.time()
         product_counter = 1
 
         # создаём и открываем окно браузера
@@ -258,11 +246,11 @@ def start_parser():
                     write_productdata_to_db(product_data)
                     product_counter += 1
 
-                    # отправка данных на FTP сервер каждые 300 товаров, или по истечении двух часов
-                    if product_counter % 3000 == 0 or time.time() - last_upd_time > 3600:
-                        last_upd_time = time.time()
-                        upload_db_data_to_xlsx()
-                        upload_db_to_ftp()
+                    # # отправка данных на FTP сервер каждые 300 товаров, или по истечении двух часов
+                    # if product_counter % 3000 == 0 or time.time() - last_upd_time > 3600:
+                    #     last_upd_time = time.time()
+                    #     upload_db_data_to_xlsx()
+                    #     upload_db_to_ftp()
 
                 else:
                     len_upd_links -= 1
@@ -310,8 +298,8 @@ def start_activity_validation():
 # запускает сессию обновления активности товаров
 def start_activity_update():
     while True:
-        get_all_active_links(flag_upd_activity=True)
-        update_products_activity(flag_upd_activity=True)
+        get_all_active_links()
+        update_products_activity(to_del=True)
         last_upd_time = time.time()
         start_activity_validation()
         update_final_prices()

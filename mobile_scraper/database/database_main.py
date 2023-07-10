@@ -699,26 +699,3 @@ def upload_db_data_to_xlsx():
     querry5 = "SELECT * FROM vehicles_data WHERE " + ' OR '.join(
         ["make = '{}'".format(make) for make in makes_category5]) + ';'
     write_data_to_xlsx(querry5, 'output5.xlsx')
-
-
-def refresh_models():
-    all_models_dict = read_models_from_db()
-    names = get_querry_result("SELECT name FROM vehicles_data;")
-
-    for name in names:
-        for make in all_models_dict:
-            if make in name.split():
-                product_make = make
-                for model in all_models_dict[make]:
-                    if model in name.split():
-                        product_model = model
-
-                        try:
-                            get_querry_result(f"UPDATE vehicles_data SET make = '{product_make}', model = '{product_model}'"
-                                              f" WHERE name = '{name}'")
-                            print(name, product_make, product_model)
-                        except Exception as _ex:
-                            print(_ex)
-
-
-refresh_models()
