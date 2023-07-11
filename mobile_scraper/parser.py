@@ -223,49 +223,46 @@ def update_products_activity(to_del=False):
 
 # запуск сессии парсинга
 def start_parser():
-    while True:
-        # формируем валидные ссылки для парсинга
-        upd_links = update_products_activity()
-        len_upd_links = len(upd_links)
-        # last_upd_time = time.time()
-        product_counter = 1
+    # формируем валидные ссылки для парсинга
+    upd_links = update_products_activity()
+    len_upd_links = len(upd_links)
+    # last_upd_time = time.time()
+    product_counter = 1
 
-        # создаём и открываем окно браузера
-        driver = create_driver()
-        driver.get(HOST)
-        for link in upd_links:
-            try:
-                # непосредственно парсинг товаров
-                print(f"\n[UPDATER INFO] {product_counter}/{len_upd_links}. {link}")
-                driver.execute_script('window.location.href = arguments[0];', link)
-                soup = get_htmlsoup(driver)
-                product_data = get_data(soup, link)
-                active_names = get_active_names_from_db()
+    # создаём и открываем окно браузера
+    driver = create_driver()
+    driver.get(HOST)
+    for link in upd_links:
+        try:
+            # непосредственно парсинг товаров
+            print(f"\n[UPDATER INFO] {product_counter}/{len_upd_links}. {link}")
+            driver.execute_script('window.location.href = arguments[0];', link)
+            soup = get_htmlsoup(driver)
+            product_data = get_data(soup, link)
+            active_names = get_active_names_from_db()
 
-                # проверка на дубликат
-                if product_data and (product_data['Title'] not in active_names):
-                    write_productdata_to_db(product_data)
-                    product_counter += 1
+            # проверка на дубликат
+            if product_data and (product_data['Title'] not in active_names):
+                write_productdata_to_db(product_data)
+                product_counter += 1
 
+                # # отправка данных на FTP сервер каждые 300 товаров, или по истечении двух часов
+                # if product_counter % 3000 == 0 or time.time() - last_upd_time > 3600:
+                #     last_upd_time = time.time()
+                #     upload_db_data_to_xlsx()
+                #     upload_db_to_ftp()
 
-                    # # отправка данных на FTP сервер каждые 300 товаров, или по истечении двух часов
-                    # if product_counter % 3000 == 0 or time.time() - last_upd_time > 3600:
-                    #     last_upd_time = time.time()
-                    #     upload_db_data_to_xlsx()
-                    #     upload_db_to_ftp()
+            else:
+                len_upd_links -= 1
+                invalid_links_file = open(os.path.join(BASE_DIR, 'mobile_scraper', 'links_data',
+                                                       'invalid_links.txt'), 'a+', encoding='utf-8')
+                invalid_links_file.write(link + "\n")
+                invalid_links_file.close()
 
-                else:
-                    len_upd_links -= 1
-                    invalid_links_file = open(os.path.join(BASE_DIR, 'mobile_scraper', 'links_data',
-                                                           'invalid_links.txt'), 'a+', encoding='utf-8')
-                    invalid_links_file.write(link + "\n")
-                    invalid_links_file.close()
-
-            except Exception as _ex:
-                print(_ex, "in updater.py line 196")
-            # time.sleep(1)
-        kill_driver(driver)
-        break
+        except Exception as _ex:
+            print(_ex, "in updater.py line 196")
+        time.sleep(1)
+    kill_driver(driver)
 
 
 # поштучно проверяет активность спорных товаров на сайте по его ссылке
@@ -303,7 +300,6 @@ def start_activity_validation():
 def start_activity_update():
     get_all_active_links()
     update_products_activity(to_del=True)
-    last_upd_time = time.time()
     start_activity_validation()
 
     print(f"\n[ACTIVITY UPDATER] Активность товаров успешна обновлена: {datetime.datetime.now()}")
