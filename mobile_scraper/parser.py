@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from mobile_scraper.scraper_main import get_htmlsoup, get_data, create_driver, kill_driver
 from mobile_scraper.database.database_main import write_productdata_to_db, get_local_links_from_db, \
     get_active_names_from_db, edit_product_activity_in_db, get_unactive_links_from_db, \
-    delete_unactive_positions, update_final_prices
+    delete_unactive_positions
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 HOST = "https://www.mobile.de"
@@ -16,6 +16,7 @@ HOST = "https://www.mobile.de"
 
 # возвращает все ссылки на товары со страницы
 def get_product_links_from_page(driver):
+    time.sleep(1)
     soup = get_htmlsoup(driver)
     txt_name = "active_links.txt"
 
@@ -246,6 +247,7 @@ def start_parser():
                     write_productdata_to_db(product_data)
                     product_counter += 1
 
+
                     # # отправка данных на FTP сервер каждые 300 товаров, или по истечении двух часов
                     # if product_counter % 3000 == 0 or time.time() - last_upd_time > 3600:
                     #     last_upd_time = time.time()
@@ -261,8 +263,9 @@ def start_parser():
 
             except Exception as _ex:
                 print(_ex, "in updater.py line 196")
-
+            # time.sleep(1)
         kill_driver(driver)
+        break
 
 
 # поштучно проверяет активность спорных товаров на сайте по его ссылке
@@ -291,20 +294,16 @@ def start_activity_validation():
             cntr += 1
         except Exception as _ex:
             print(f"[UNACTIVE LINKS VALIDATION] Error: {_ex}")
+        time.sleep(1)
     delete_unactive_positions()
     kill_driver(driver)
 
 
 # запускает сессию обновления активности товаров
 def start_activity_update():
-    while True:
-        get_all_active_links()
-        update_products_activity(to_del=True)
-        last_upd_time = time.time()
-        start_activity_validation()
-        update_final_prices()
+    get_all_active_links()
+    update_products_activity(to_del=True)
+    last_upd_time = time.time()
+    start_activity_validation()
 
-        print(f"\n[ACTIVITY UPDATER] Активность товаров успешна обновлена: {datetime.datetime.now()}")
-
-        if time.time() - last_upd_time < 3600:
-            time.sleep(3600 - (time.time() - last_upd_time))
+    print(f"\n[ACTIVITY UPDATER] Активность товаров успешна обновлена: {datetime.datetime.now()}")
