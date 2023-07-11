@@ -230,7 +230,7 @@ def write_productdata_to_db(product_data):
                 if make in name.split():
                     product_make = make
                     for model in all_models_dict[make]:
-                        if model in name.split():
+                        if model in name:
                             product_model = model
 
             # ПОБОЧКА
