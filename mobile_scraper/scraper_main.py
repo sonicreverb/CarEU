@@ -10,7 +10,7 @@ from googletrans import Translator
 # возвращает driver
 def create_driver():
     print('[DRIVER INFO] Driver created successfully.\n')
-    return webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+    return webdriver.Chrome(service=Service(ChromeDriverManager(version='114.0.5735.90').install()))
 
 
 # закрывает все окна и завершает сеанс driver
@@ -66,7 +66,7 @@ def get_data(soup, url=None):
 
         technical_options_soup_li = soup.find('div', class_='vip-details-block u-margin-bottom-18') \
             .find_all('span', {'class': 'g-col-6'})
-        TO_dict = {}
+        techopt_dict = {}
         # меня напрягает и фрустрирует, что линтер ругается на это, поэтому ЭТО здесь
         col_key = 'error'
 
@@ -75,7 +75,7 @@ def get_data(soup, url=None):
                 col_key = technical_options_soup_li[col_index].get_text()
             else:
                 col_value = technical_options_soup_li[col_index].get_text().replace(u'\u2009', u' ')
-                TO_dict[col_key] = col_value.replace(u'\xa0', u' ')
+                techopt_dict[col_key] = col_value.replace(u'\xa0', u' ')
 
         characteristics = ''
         for row in soup.find_all('p', class_='bullet-point-text'):
@@ -108,7 +108,7 @@ def get_data(soup, url=None):
             .find('a').get('href')
 
         product_data = {'Title': title, 'URL': url, 'BruttoPrice': brutto_price, 'NettoPrice': netto_price,
-                        'ImgLi': img_li, 'TechOptDict': TO_dict, 'CharacteristicsStr': characteristics,
+                        'ImgLi': img_li, 'TechOptDict': techopt_dict, 'CharacteristicsStr': characteristics,
                         'DescriptionStr': description_str.strip(), 'DescriptionTRD': description_translated,
                         'DealerData': [dealer_name, dealer_link, dealer_phone]}
 

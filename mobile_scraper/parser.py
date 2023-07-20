@@ -133,8 +133,8 @@ def get_models_dict():
 # загрузка данных из таблицы на ftp
 def upload_updtable_to_ftp(filename):
     ftp_server = 'careu.ru'
-    ftp_username = 'pikprice_123'
-    ftp_password = 'u6M&k9J4'
+    ftp_username = 'ivvsavqz_1'
+    ftp_password = 'Y*KCl3AT'
     remote_file_path = filename
     local_file_path = os.path.join(BASE_DIR, 'mobile_scraper', 'database', remote_file_path)
 
@@ -292,7 +292,7 @@ def start_activity_validation():
         except Exception as _ex:
             print(f"[UNACTIVE LINKS VALIDATION] Error: {_ex}")
         time.sleep(1)
-    delete_unactive_positions()
+    # delete_unactive_positions()
     kill_driver(driver)
 
 
@@ -300,6 +300,7 @@ def start_activity_validation():
 def start_activity_update():
     get_all_active_links()
     update_products_activity(to_del=True)
-    start_activity_validation()
+    delete_unactive_positions()
+    # start_activity_validation()
 
     print(f"\n[ACTIVITY UPDATER] Активность товаров успешна обновлена: {datetime.datetime.now()}")
