@@ -1,3 +1,4 @@
+import datetime
 import re
 
 from selenium import webdriver
@@ -10,7 +11,7 @@ from googletrans import Translator
 # возвращает driver
 def create_driver():
     print('[DRIVER INFO] Driver created successfully.\n')
-    return webdriver.Chrome(service=Service(ChromeDriverManager(version='114.0.5735.90').install()))
+    return webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 
 
 # закрывает все окна и завершает сеанс driver
@@ -76,6 +77,12 @@ def get_data(soup, url=None):
             else:
                 col_value = technical_options_soup_li[col_index].get_text().replace(u'\u2009', u' ')
                 techopt_dict[col_key] = col_value.replace(u'\xa0', u' ')
+
+        # фильтр по дате (не больше, чем 5 давности лет для машины)
+        if int(datetime.datetime.now().strftime("%y")) - int(techopt_dict['Первая регистрация'][-2:]) == 5:
+            if int(datetime.datetime.now().strftime("%m")) > int(techopt_dict['Первая регистрация'][:2]):
+                print("[GET DATA INFO] Too old release date.")
+                return None
 
         characteristics = ''
         for row in soup.find_all('p', class_='bullet-point-text'):
