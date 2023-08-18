@@ -6,6 +6,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
 from bs4 import BeautifulSoup
 from googletrans import Translator
+from mobile_scraper.telegram_alerts.telegram_notifier import send_notification
 
 
 # возвращает driver
@@ -24,6 +25,13 @@ def kill_driver(driver):
 # возвращает soup указанной страницы
 def get_htmlsoup(driver):
     try:
+        # обработка случая, при котором доступ к сайту заблокирован
+        if "Zugriff verweigert / Access denied" in driver.page_source:
+            notification = "Error! Access to mobile denied."
+            send_notification(f"[CAREU] Во время сессии возникла ошибка ({str(datetime.datetime.now())[:-7]}).\n"
+                              f"Информация об ошибке: {notification}")
+            raise SystemExit(f"[GET HTML] {notification}")
+
         soup = BeautifulSoup(driver.page_source, 'html.parser')
         return soup
 
