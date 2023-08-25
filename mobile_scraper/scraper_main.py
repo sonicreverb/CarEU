@@ -1,4 +1,3 @@
-import datetime
 import re
 
 from selenium import webdriver
@@ -7,6 +6,7 @@ from selenium.webdriver.chrome.service import Service
 from bs4 import BeautifulSoup
 from googletrans import Translator
 from mobile_scraper.telegram_alerts.telegram_notifier import send_notification
+from datetime import datetime
 
 
 # возвращает driver
@@ -28,7 +28,7 @@ def get_htmlsoup(driver):
         # обработка случая, при котором доступ к сайту заблокирован
         if "Zugriff verweigert / Access denied" in driver.page_source:
             notification = "Error! Access to mobile denied."
-            send_notification(f"[CAREU] Во время сессии возникла ошибка ({str(datetime.datetime.now())[:-7]}).\n"
+            send_notification(f"[CAREU] Во время сессии возникла ошибка ({str(datetime.now())[:-7]}).\n"
                               f"Информация об ошибке: {notification}")
             raise SystemExit(f"[GET HTML] {notification}")
 
@@ -87,10 +87,16 @@ def get_data(soup, url=None):
                 techopt_dict[col_key] = col_value.replace(u'\xa0', u' ')
 
         # фильтр по дате (не больше, чем 5 давности лет для машины)
-        if int(datetime.datetime.now().strftime("%y")) - int(techopt_dict['Первая регистрация'][-2:]) == 5:
-            if int(datetime.datetime.now().strftime("%m")) > int(techopt_dict['Первая регистрация'][:2]):
-                print("[GET DATA INFO] Too old release date.")
-                return None
+        date_string = techopt_dict['Первая регистрация']
+        input_date = datetime.strptime(date_string, "%m/%Y")
+        current_date = datetime.now()
+        first_day_of_current_month = datetime(current_date.year, current_date.month, 1)
+        age_diff = (first_day_of_current_month - input_date).days / 365
+
+        if age_diff >= 5 or age_diff <= 2.8:
+            print("[GET DATA INFO] Incorrect release date.")
+            print(date_string, age_diff)
+            return None
 
         characteristics = ''
         for row in soup.find_all('p', class_='bullet-point-text'):

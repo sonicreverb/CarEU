@@ -132,9 +132,9 @@ def get_models_dict():
 
 # загрузка данных из таблицы на ftp
 def upload_updtable_to_ftp(filename):
-    ftp_server = 'careu.ru'
-    ftp_username = 'ivvsavqz_1'
-    ftp_password = 'Y*KCl3AT'
+    ftp_server = 'ivvsavqz.beget.tech'
+    ftp_username = 'ivvsavqz_2'
+    ftp_password = 'X3OR3k2&'
     remote_file_path = filename
     local_file_path = os.path.join(BASE_DIR, 'mobile_scraper', 'database', remote_file_path)
 

@@ -10,7 +10,7 @@ if __name__ == "__main__":
         try:
             begin_time = time.time()
 
-            send_notification(f"[CAREU] Запущен процесс обновления актинвости товаров "
+            send_notification(f"[CAREU] Запущен процесс обновления активности товаров "
                               f"({str(datetime.datetime.now())[:-7]}).")
             start_activity_update()
             send_notification(f"[CAREU] Процесс обновления активности товаров завершён "
@@ -45,4 +45,3 @@ if __name__ == "__main__":
         except Exception as _exception:
             send_notification(f"[CAREU] Во время сессии возникла ошибка ({str(datetime.datetime.now())[:-7]}).\n"
                               f"Информация об ошибке: {_exception}")
-            break
