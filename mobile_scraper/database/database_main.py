@@ -339,12 +339,12 @@ def write_productdata_to_db(product_data):
 
             brutto_price_rubles = (int(product_data['BruttoPrice']) * euro_rate)
 
-            # Цена с комиссией =((нетто + брутто*0,1)+(брутто*0,07+300))*курсевро
+            # Цена с комиссией =((нетто + брутто*0,1)+(брутто*0,07+300))*курсевро * 1.05
             comission_price_rubles = ((int(product_data["NettoPrice"]) + int(product_data['BruttoPrice']) * 0.1) +
-                                      (int(product_data['BruttoPrice']) * 0.07 + 300)) * euro_rate
+                                      (int(product_data['BruttoPrice']) * 0.07 + 300)) * euro_rate * 1.05
 
-            # Цена с доставкой = цена с комиссией + 2000евро
-            delivery_price_rubles = int(comission_price_rubles + 2000 * euro_rate)
+            # Цена с доставкой = цена с комиссией + 2000евро * 1.05
+            delivery_price_rubles = int(comission_price_rubles + 2000 * euro_rate) * 1.05
 
             # Цена с растоможкой = цена с доставкой + стоимость растоможки согласно объему двигателя + 50000р
             custom_clearance_coeff = get_custom_clearance_coeff(volume)
@@ -696,3 +696,33 @@ def upload_db_data_to_xlsx():
     querry5 = "SELECT * FROM vehicles_data WHERE " + ' OR '.join(
         ["make = '{}'".format(make) for make in makes_category5]) + ';'
     write_data_to_xlsx(querry5, 'output5.xlsx')
+
+
+# очищает дубликаты и позиции, не подходящие по дате в БД
+def clear_duples_and_out_of_date_prods():
+    # получаем соединение
+    connection = get_connection_to_db()
+
+    # если соединение установлено успешно
+    if connection:
+        with connection.cursor() as cursor:
+            # очищаем товары по нижней дате
+            cursor.execute("DELETE FROM vehicles_data WHERE to_date(category2, 'MM/YYYY') "
+                           "<= (NOW() - INTERVAL '5 years');")
+            # очищаем товары по верхней дате
+            cursor.execute("DELETE FROM vehicles_data WHERE to_date(category2, 'MM/YYYY') "
+                           ">= NOW() - INTERVAL '3 years');")
+            # очищаем дубликаты
+            cursor.execute("DELETE FROM vehicles_data "
+                           "WHERE id NOT IN (SELECT MIN(id) "
+                           "FROM vehicles_data GROUP BY name);")
+
+            print("[PostGreSQL INFO] Data was cleared successfully.")
+
+        connection.commit()
+        # прикрываем соединение
+        connection.close()
+        print("[PostGreSQL INFO] Connection closed.")
+    else:
+        print("[PostGreSQL INFO] Error, couldn't get connection...")
+        return None

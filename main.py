@@ -1,7 +1,8 @@
 import datetime
 import time
 
-from mobile_scraper.database.database_main import upload_db_data_to_xlsx, update_tcalc, update_final_prices
+from mobile_scraper.database.database_main import upload_db_data_to_xlsx, update_tcalc, update_final_prices, \
+    clear_duples_and_out_of_date_prods
 from mobile_scraper.parser import start_parser, start_activity_update, upload_db_to_ftp
 from mobile_scraper.telegram_alerts.telegram_notifier import send_notification
 
@@ -25,6 +26,7 @@ if __name__ == "__main__":
                               f"({str(datetime.datetime.now())[:-7]}).)")
             update_tcalc()
             update_final_prices()
+            clear_duples_and_out_of_date_prods()
 
             send_notification(f"[CAREU] Загрузка данных в таблицы ({str(datetime.datetime.now())[:-7]}).)")
             upload_db_data_to_xlsx()
