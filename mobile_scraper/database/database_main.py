@@ -74,7 +74,7 @@ def update_models_table_to_db(models_data):
 
 
 # возвращает результат выполняемого запроса в БД
-def get_querry_result(querry):
+def get_querry_result(querry, data_returned=True):
     # получаем соединение
     connection = get_connection_to_db()
 
@@ -86,13 +86,14 @@ def get_querry_result(querry):
             # выполнение БД запроса
             cursor.execute(querry)
 
-            try:
-                for bd_object in cursor.fetchall():
-                    result.append(bytes(bd_object[0], 'utf-8').decode('unicode_escape'))
+            if data_returned:
+                try:
+                    for bd_object in cursor.fetchall():
+                        result.append(bd_object[0])
 
-                print("[PostGreSQL INFO] Data was read successfully.")
-            except psycopg2.ProgrammingError:
-                pass
+                    print("[PostGreSQL INFO] Data was read successfully.")
+                except psycopg2.ProgrammingError:
+                    pass
 
         connection.commit()
         # прикрываем соединение
@@ -224,13 +225,18 @@ def write_productdata_to_db(product_data):
             product_make = ' '
             product_model = ' '
 
-            # todo убедиться в правильности
             for make in all_models_dict:
                 if make in name.split():
                     product_make = make
-                    for model in all_models_dict[make]:
-                        if model in name:
-                            product_model = model
+                    product_model = find_first_occurrence(name,  all_models_dict.get(make, []))
+
+            if not product_model:
+                print("[WRITE DATA TO DB] Couldn't find model.")
+                connection.commit()
+                # прикрываем соединение
+                connection.close()
+                print("[PostGreSQL INFO] Connection closed.")
+                return None
 
             # ПОБОЧКА
             characteristics = product_data['CharacteristicsStr']
@@ -649,7 +655,7 @@ def write_data_to_xlsx(querry, filename):
                     try:
                         worksheet[f"{column_letter}{row_index}"] = str(cell_value)
                     except Exception as _ex:
-                        print('[XLSX FILE] could\'t write cell value, string error.')
+                        print('[XLSX FILE] could\'t write cell value, string error.', _ex)
                     worksheet[f"BF{row_index}"] = str(euro_rate)
 
             # сохранение файла
@@ -726,3 +732,39 @@ def clear_duples_and_out_of_date_prods():
     else:
         print("[PostGreSQL INFO] Error, couldn't get connection...")
         return None
+
+
+# возвращает элемент array, который встречается раньше всех в string
+def find_first_occurrence(string, array):
+    first_index = len(string) + 1
+    size = 0
+    result = None
+
+    for item in array:
+        index = string.find(item)
+        if index != -1 and index < first_index:
+            first_index = index
+            size = len(item)
+            result = item
+        elif index == first_index and len(item) > size:
+            first_index = index
+            size = len(item)
+            result = item
+
+    return result
+
+
+# присваивает позициям в БД корректные модели в БД
+def refresh_models_in_db():
+    models = read_models_from_db()
+    ids = get_querry_result('SELECT id FROM vehicles_data;')
+    for product_id in ids:
+        name = get_querry_result(f'SELECT name FROM vehicles_data WHERE id = {product_id}')[0]
+        make = get_querry_result(f'SELECT make FROM vehicles_data WHERE id = {product_id}')[0]
+        model = find_first_occurrence(name, models[make])
+        if model:
+            print(product_id, name, make, model)
+            get_querry_result(f"UPDATE vehicles_data SET model = '{model}' WHERE id = {product_id};",
+                              data_returned=False)
+        else:
+            get_querry_result(f"DELETE FROM vehicles_data WHERE id = {product_id};", data_returned=False)
