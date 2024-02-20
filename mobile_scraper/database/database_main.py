@@ -712,12 +712,14 @@ def clear_duples_and_out_of_date_prods():
     # если соединение установлено успешно
     if connection:
         with connection.cursor() as cursor:
-            # очищаем товары по нижней дате
+            # Очищаем товары по нижней дате (4 года и 11 месяцев назад)
             cursor.execute("DELETE FROM vehicles_data WHERE to_date(category2, 'MM/YYYY') "
-                           "<= (NOW() - INTERVAL '5 years');")
-            # очищаем товары по верхней дате
+                           "<= ((NOW() - INTERVAL '4 years') - INTERVAL '11 months');")
+
+            # Очищаем товары по верхней дате (2 года и 11 месяцев назад)
             cursor.execute("DELETE FROM vehicles_data WHERE to_date(category2, 'MM/YYYY') "
-                           ">= NOW() - INTERVAL '3 years');")
+                           ">= ((NOW() - INTERVAL '2 years') - INTERVAL '11 months');")
+
             # очищаем дубликаты
             cursor.execute("DELETE FROM vehicles_data "
                            "WHERE id NOT IN (SELECT MIN(id) "
