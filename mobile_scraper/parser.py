@@ -2,22 +2,29 @@
 import os.path
 import time
 import ftplib
+import threading
 
 from selenium.webdriver.support.select import Select
+from selenium.common.exceptions import InvalidSessionIdException, TimeoutException
 from bs4 import BeautifulSoup
-from mobile_scraper.scraper_main import get_htmlsoup, get_data, create_driver, kill_driver
+from mobile_scraper.scraper_main import get_htmlsoup, get_data, create_driver, kill_driver, reload_driver_proxy
 from mobile_scraper.database.database_main import write_productdata_to_db, get_local_links_from_db, \
     get_active_names_from_db, edit_product_activity_in_db, get_unactive_links_from_db, \
     delete_unactive_positions
+from mobile_scraper.telegram_alerts.telegram_notifier import send_notification
 
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+# BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+BASE_DIR = "C:\\Users\\careu\\PycharmProjects\\CarEU"
 HOST = "https://www.mobile.de"
+PARSING_TIME_DELAY = 0
+driver_requests = 0
 
 
 # возвращает все ссылки на товары со страницы
 def get_product_links_from_page(driver):
-    time.sleep(1)
+    global driver_requests
     soup = get_htmlsoup(driver)
+    driver_requests += 1
     txt_name = "active_links.txt"
 
     # поиск и запись в массив всех ссылок на товары со страницы
@@ -33,11 +40,17 @@ def get_product_links_from_page(driver):
     # переход на следующую страницу
     if soup.find('a', class_='pagination-nav pagination-nav-right btn btn--muted btn--s'):
         try:
+            # print(driver_requests)
+            # if driver_requests % 10 == 0:
+            #    driver = reload_driver_proxy(driver)
+
             new_url = HOST + soup.find('a', class_='pagination-nav pagination-nav-right btn '
                                                    'btn--muted btn--s').get('href')
             # переключаем вкладку
             print(f"[GET ACTIVE LINKS INFO] {new_url}")
+
             driver.execute_script('window.location.href = arguments[0];', new_url)
+            # driver_requests += 1
             get_product_links_from_page(driver)
 
         except Exception as exc:
@@ -53,17 +66,20 @@ def get_all_active_links():
         pass
 
     # создаём и открываем окно браузера
-    driver = create_driver()
-    driver.get('https://www.mobile.de/ru')
     with open(os.path.join(BASE_DIR, "mobile_scraper", "links_data", "filtered_links.txt")) as fl_input:
         for filtered_link in fl_input:
             try:
+                driver = create_driver()
+                driver = reload_driver_proxy(driver)
+                driver.get('https://www.mobile.de/ru')
+
                 print(f"[GET ACTIVE LINKS INFO] {filtered_link}", end="")
                 driver.execute_script('window.location.href = arguments[0];', filtered_link)
                 get_product_links_from_page(driver)
             except Exception as _ex:
-                print('[GET ACTIVE LINKS INFO]', _ex)
-        kill_driver(driver)
+                print('[GET ACTIVE LINKS INFO]', type(_ex), _ex)
+            finally:
+                kill_driver(driver)
 
 
 def get_models_dict():
@@ -134,7 +150,7 @@ def get_models_dict():
 def upload_updtable_to_ftp(filename):
     ftp_server = 'ivvsavqz.beget.tech'
     ftp_username = 'ivvsavqz_2'
-    ftp_password = 'X3OR3k2&'
+    ftp_password = 'xR*P4g7K'
     remote_file_path = filename
     local_file_path = os.path.join(BASE_DIR, 'mobile_scraper', 'database', remote_file_path)
 
@@ -221,12 +237,38 @@ def update_products_activity(to_del=False):
     return upd_links
 
 
+TIMEOUT_SECONDS = 120
+
+
+# todo
+# функция для запуска в отдельном потоке, которая проверяет находиться ли драйвер больше чем duration секунд
+# на одной и той же странице, в случае если драйвер "завис" на одной и той же странице - вызывает driver.close()
+def timeout_validation(driver, duration=TIMEOUT_SECONDS):
+    old_url = driver.current_url
+    time.sleep(duration)
+
+    try:
+        if driver.current_url == old_url:
+            print(f'[TIMEOUT VALIDATION] ({threading.current_thread().name}) '
+                  f'Driver was closed as the page processing time exceeded. ({old_url})')
+            driver.refresh()
+
+    except Exception as _ex:
+        print(f'[TIMEOUT VALIDATION] ({threading.current_thread().name}) '
+              f'Driver was closed because {_ex} ({old_url})')
+        driver.refresh()
+
+
 # запуск сессии парсинга
 def start_parser():
+    global driver_requests
+
     # формируем валидные ссылки для парсинга
     upd_links = update_products_activity()
     len_upd_links = len(upd_links)
-    # last_upd_time = time.time()
+    send_notification(f"[CAREU PARSER INFO] Кол-во позиций к парсингу: {len_upd_links}")
+
+    success_counter = 1
     product_counter = 1
 
     # создаём и открываем окно браузера
@@ -234,8 +276,23 @@ def start_parser():
     driver.get(HOST)
     for link in upd_links:
         try:
+            driver_requests += 1
+            if driver_requests % 50 == 0:
+                driver = reload_driver_proxy(driver)
+            # if product_counter % 50 == 0:
+            #     kill_driver(driver)
+            #     driver = create_driver()
+            #     driver.get("https://duckduckgo.com/")
+            if product_counter % 1000 == 0:
+                send_notification(f"\n[CAREU PARSER INFO] Очередная тысяча товаров спрашена. "
+                                  f"Текущее положение: {success_counter}/{len_upd_links}.")
+            # отдельный поток для перехода на новый товар, если текущий обрабатывается уже более TIMEOUT_SECONDS
+            # timeout_val_thread = threading.Thread(target=timeout_validation, name='TimeoutValidationThread',
+            #                                       args=(driver, TIMEOUT_SECONDS))
+            # timeout_val_thread.start()
+
             # непосредственно парсинг товаров
-            print(f"\n[UPDATER INFO] {product_counter}/{len_upd_links}. {link}")
+            print(f"\n[CAREU PARSER INFO] {success_counter}/{len_upd_links}. {link}")
             driver.execute_script('window.location.href = arguments[0];', link)
             soup = get_htmlsoup(driver)
             product_data = get_data(soup, link)
@@ -244,13 +301,7 @@ def start_parser():
             # проверка на дубликат
             if product_data and (product_data['Title'] not in active_names):
                 write_productdata_to_db(product_data)
-                product_counter += 1
-
-                # # отправка данных на FTP сервер каждые 300 товаров, или по истечении двух часов
-                # if product_counter % 3000 == 0 or time.time() - last_upd_time > 3600:
-                #     last_upd_time = time.time()
-                #     upload_db_data_to_xlsx()
-                #     upload_db_to_ftp()
+                success_counter += 1
 
             else:
                 len_upd_links -= 1
@@ -259,9 +310,17 @@ def start_parser():
                 invalid_links_file.write(link + "\n")
                 invalid_links_file.close()
 
+        except InvalidSessionIdException or TimeoutException:
+            len_upd_links -= 1
+            kill_driver(driver)
+            print('[PARSING PROCESS] Driver timeout.')
+            print('[PARSING RPOCESS] Recreating driver.')
+            driver = create_driver()
+            driver.get('https://duckduckgo.com')
         except Exception as _ex:
             print(_ex, "in updater.py line 196")
-        time.sleep(1)
+        time.sleep(PARSING_TIME_DELAY)
+        product_counter += 1
     kill_driver(driver)
 
 

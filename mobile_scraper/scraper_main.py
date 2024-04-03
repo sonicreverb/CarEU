@@ -1,6 +1,9 @@
 import re
+import os
+import zipfile
 
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
 from bs4 import BeautifulSoup
@@ -8,11 +11,124 @@ from googletrans import Translator
 from mobile_scraper.telegram_alerts.telegram_notifier import send_notification
 from datetime import datetime
 
+BASE_DIR = "C:\\Users\\careu\\PycharmProjects\\CarEU"
+
+# кол-во доступных прокси конфигов
+AVAILABLE_PROXIES_NUM = 3
+current_proxy_num = 0
+
+# глобальная переменная для
+driver_requests = 0
+
+
+# считывает из файла proxy.txt параметры прокси
+def get_proxy_creds(filename="proxy.txt"):
+    if not filename:
+        return None
+    result = {'host': '', 'port': '', 'login': '', 'password': ''}
+    proxy_path = os.path.join(BASE_DIR, 'mobile_scraper', filename)
+    if os.path.exists(proxy_path):
+        with open(proxy_path, 'r') as file:
+            array_of_lines = file.readlines()
+        result['host'] = array_of_lines[0].strip()
+        result['port'] = array_of_lines[1].strip()
+        result['login'] = array_of_lines[2].strip()
+        result['password'] = array_of_lines[3].strip()
+
+        print(f'[SET PROXY] Данные прокси из \'{filename}\' успешно получены '
+              f'({result["host"]}:{result["port"]} login - {result["login"]} password - {result["password"]})')
+        return result
+    else:
+        print(f'[SET PROXY] Не удалось найти файл с настройками прокси \'{filename}\'')
+        return None
+
+
+manifest_json = """
+{
+    "version": "1.0.0",
+    "manifest_version": 2,
+    "name": "Chrome Proxy",
+    "permissions": [
+        "proxy",
+        "tabs",
+        "unlimitedStorage",
+        "storage",
+        "<all_urls>",
+        "webRequest",
+        "webRequestBlocking"
+    ],
+    "background": {
+        "scripts": ["background.js"]
+    },
+    "minimum_chrome_version":"22.0.0"
+}
+"""
+
 
 # возвращает driver
-def create_driver():
-    print('[DRIVER INFO] Driver created successfully.\n')
-    return webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+def create_driver(proxy_filename=None):
+    chrome_options = Options()
+
+    try:
+        proxy_data = get_proxy_creds(proxy_filename)
+    except Exception as _ex:
+        print(f'[SET PROXY] Не удалось получить параметры прокси. Ошибка ({_ex})')
+        proxy_data = False
+
+    if proxy_data:
+        proxy_host = proxy_data.get('host')
+        proxy_port = proxy_data.get('port')
+        proxy_username = proxy_data.get('login')
+        proxy_password = proxy_data.get('password')
+
+        background_js = """
+                   var config = {
+                           mode: "fixed_servers",
+                           rules: {
+                           singleProxy: {
+                               scheme: "http",
+                               host: "%s",
+                               port: parseInt(%s)
+                           },
+                           bypassList: ["localhost"]
+                           }
+                       };
+
+                   chrome.proxy.settings.set({value: config, scope: "regular"}, function() {});
+
+                   function callbackFn(details) {
+                       return {
+                           authCredentials: {
+                               username: "%s",
+                               password: "%s"
+                           }
+                       };
+                   }
+
+                   chrome.webRequest.onAuthRequired.addListener(
+                               callbackFn,
+                               {urls: ["<all_urls>"]},
+                               ['blocking']
+                   );
+                   """ % (proxy_host, proxy_port, proxy_username, proxy_password)
+        pluginfile = os.path.join(BASE_DIR, 'proxy_auth_plugin.zip')
+        with zipfile.ZipFile(pluginfile, 'w') as zp:
+            zp.writestr("manifest.json", manifest_json)
+            zp.writestr("background.js", background_js)
+        chrome_options.add_extension(pluginfile)
+
+    # prefs = {"profile.managed_default_content_settings.images": 2}
+    # chrome_options.add_experimental_option("prefs", prefs)
+    chrome_options.add_argument("user-agent=Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:84.0) Gecko/20100101 "
+                                "Firefox/84.0")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+
+    # print('[DRIVER INFO] Driver created successfully with images disabled.\n')
+    return driver
+    # print('[DRIVER INFO] Driver created successfully.\n')
+    # return webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 
 
 # закрывает все окна и завершает сеанс driver
@@ -20,6 +136,21 @@ def kill_driver(driver):
     driver.close()
     driver.quit()
     print('[DRIVER INFO] Driver was closed successfully.\n')
+
+
+def reload_driver_proxy(driver):
+    global current_proxy_num
+    # перезагрузка драйвера каждые 50 запросов и смена прокси
+    # if driver_requests % 10 == 0:
+    old_url = driver.current_url
+    kill_driver(driver)
+
+    current_proxy_num = (current_proxy_num + 1) % AVAILABLE_PROXIES_NUM
+    driver = create_driver(f"proxy_{current_proxy_num}.txt")
+    driver.get(old_url)
+    print(f'[GET HTMLSOUP] Переключение прокси на \'proxy_{current_proxy_num}.txt\' успешно!')
+
+    return driver
 
 
 # возвращает soup указанной страницы

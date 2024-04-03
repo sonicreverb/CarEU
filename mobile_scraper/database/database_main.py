@@ -10,7 +10,8 @@ from openpyxl.utils import get_column_letter
 from mobile_scraper.database.config import host, user, password, db_name
 from pycbrf import ExchangeRates
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+# BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+BASE_DIR = "C:\\Users\\careu\\PycharmProjects\\CarEU"
 
 
 # получение соединения с БД
@@ -225,10 +226,28 @@ def write_productdata_to_db(product_data):
             product_make = ' '
             product_model = ' '
 
+            special_cases_makes = ['Alfa Romeo', 'Aston Martin', 'Land Rover']
+            special_make_flag = False
+            for spec_case in special_cases_makes:
+                if spec_case in name:
+                    special_make_flag = True
+                    spec_make = spec_case
+                    break
+
             for make in all_models_dict:
-                if make in name.split():
+                if make in name.split() or special_make_flag:
+                    if special_make_flag:
+                        make = spec_make
                     product_make = make
                     product_model = find_first_occurrence(name,  all_models_dict.get(make, []))
+                    break
+            
+            if product_model == 'XC 60':
+                product_model = 'XC60'
+            if product_model == 'XC 40':
+                product_model = 'XC40'
+            if product_model == 'XC 90':
+                product_model = 'XC90'
 
             if not product_model:
                 print("[WRITE DATA TO DB] Couldn't find model.")
@@ -595,15 +614,15 @@ def update_final_prices():
 
                 # Цена с комиссией =((нетто + брутто*0,1)+(брутто*0,07+300))*курсевро
                 comission_price_rubles = ((int(netto) + int(brutto) * 0.1) +
-                                          (int(brutto) * 0.07 + 300)) * euro_rate
+                                          (int(brutto) - int(netto)) * 0.07 + 300) * euro_rate
 
                 # Цена с доставкой = цена с комиссией + 2000евро
                 delivery_price_rubles = int(comission_price_rubles + 2000 * euro_rate)
 
-                # Цена с растоможкой = цена с доставкой + стоимость растоможки согласно объему двигателя + 50000р
+                # Цена с растаможкой = цена с доставкой + стоимость растаможки согласно объему двигателя + 60000р ЭПТС + 45K УСЛУГИ ДЕКЛАРАНТА + 100К КОМИССИЯ МЕНЕДЖЕРА
                 custom_clearance_coeff = get_custom_clearance_coeff(volume)
                 if custom_clearance_coeff:
-                    custom_clearance_rubles = delivery_price_rubles + custom_clearance_coeff + 50000
+                    custom_clearance_rubles = delivery_price_rubles + custom_clearance_coeff + 60000 + 45000 + 100000
                 else:
                     custom_clearance_rubles = 0
 
@@ -646,17 +665,34 @@ def write_data_to_xlsx(querry, filename):
             for column_index, column_name in enumerate(columns, start=1):
                 column_letter = get_column_letter(column_index)
                 worksheet[f"{column_letter}1"] = column_name
-                worksheet["BF1"] = 'euro_rate'
+            worksheet["BF1"] = 'euro_rate'
+            worksheet["BG1"] = 'delivery_cost'
+            worksheet["BH1"] = 'tamozh_cost'
+            worksheet["BI1"] = 'declarant_cost'
+            worksheet["BJ1"] = 'epts_cost'
+            worksheet["BK1"] = 'manager_cost'
 
+            total_price = 0
+            delivery_price = 0
             # запись данных
             for row_index, row in enumerate(rows, start=2):
                 for column_index, cell_value in enumerate(row):
                     column_letter = get_column_letter(column_index + 1)
+                    if column_letter == "BE":
+                        total_price = int(cell_value)
+                    elif column_letter == "BD":
+                        delivery_price = int(cell_value)
                     try:
                         worksheet[f"{column_letter}{row_index}"] = str(cell_value)
                     except Exception as _ex:
                         print('[XLSX FILE] could\'t write cell value, string error.', _ex)
                     worksheet[f"BF{row_index}"] = str(euro_rate)
+                    worksheet[f"BG{row_index}"] = str(euro_rate * 2000)
+                    print('total: ', total_price)
+                    worksheet[f"BH{row_index}"] = str(total_price - 205000 - delivery_price)
+                    worksheet[f"BI{row_index}"] = '45000'
+                    worksheet[f"BJ{row_index}"] = '60000'
+                    worksheet[f"BK{row_index}"] = '100000'
 
             # сохранение файла
             filename_path = osph.join(BASE_DIR, 'mobile_scraper', 'database', filename)
@@ -712,12 +748,14 @@ def clear_duples_and_out_of_date_prods():
     # если соединение установлено успешно
     if connection:
         with connection.cursor() as cursor:
-            # очищаем товары по нижней дате
+            # Очищаем товары по нижней дате (4 года и 11 месяцев назад)
             cursor.execute("DELETE FROM vehicles_data WHERE to_date(category2, 'MM/YYYY') "
-                           "<= (NOW() - INTERVAL '5 years');")
-            # очищаем товары по верхней дате
+                           "<= ((NOW() - INTERVAL '4 years') - INTERVAL '9 months');")
+
+            # Очищаем товары по верхней дате (2 года и 11 месяцев назад)
             cursor.execute("DELETE FROM vehicles_data WHERE to_date(category2, 'MM/YYYY') "
-                           ">= NOW() - INTERVAL '3 years');")
+                           ">= ((NOW() - INTERVAL '3 years') - INTERVAL '2 months');")
+
             # очищаем дубликаты
             cursor.execute("DELETE FROM vehicles_data "
                            "WHERE id NOT IN (SELECT MIN(id) "
@@ -757,14 +795,28 @@ def find_first_occurrence(string, array):
 # присваивает позициям в БД корректные модели в БД
 def refresh_models_in_db():
     models = read_models_from_db()
-    ids = get_querry_result('SELECT id FROM vehicles_data;')
+    ids = get_querry_result("SELECT id FROM vehicles_data;")
+    # ids = get_querry_result("SELECT id FROM vehicles_data WHERE make = 'Land Rover';")
     for product_id in ids:
-        name = get_querry_result(f'SELECT name FROM vehicles_data WHERE id = {product_id}')[0]
-        make = get_querry_result(f'SELECT make FROM vehicles_data WHERE id = {product_id}')[0]
-        model = find_first_occurrence(name, models[make])
+        name = get_querry_result(f"SELECT name FROM vehicles_data WHERE id = {product_id};")[0]
+        make = get_querry_result(f"SELECT make FROM vehicles_data WHERE id = {product_id};")[0]
+        model = False
+        try:
+            model = find_first_occurrence(name, models[make])
+        except KeyError:
+            pass
         if model:
-            print(product_id, name, make, model)
-            get_querry_result(f"UPDATE vehicles_data SET model = '{model}' WHERE id = {product_id};",
-                              data_returned=False)
+            # cringe nasty models processing
+            if model == 'XC 90' or model == 'XC 40' or model == 'XC 90':
+                model = model.replace(' ', '')
+
+            try:
+                print(product_id, name, make, model)
+                get_querry_result(f"UPDATE vehicles_data SET model = '{model}' WHERE id = {product_id};",
+                                  data_returned=False)
+            except Exception as _Ex:
+                print(_Ex)
+                get_querry_result(f"DELETE FROM vehicles_data WHERE id = {product_id};", data_returned=False)
         else:
             get_querry_result(f"DELETE FROM vehicles_data WHERE id = {product_id};", data_returned=False)
+
