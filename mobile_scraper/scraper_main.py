@@ -1,14 +1,15 @@
 import re
 import os
-import zipfile
+import undetected_chromedriver
+# import zipfile
 
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.chrome.service import Service
+# from selenium import webdriver
+# from selenium.webdriver.chrome.options import Options
+# from webdriver_manager.chrome import ChromeDriverManager
+# from selenium.webdriver.chrome.service import Service
 from bs4 import BeautifulSoup
 from googletrans import Translator
-from mobile_scraper.telegram_alerts.telegram_notifier import send_notification
+# from mobile_scraper.telegram_alerts.telegram_notifier import send_notification
 from datetime import datetime
 
 BASE_DIR = "C:\\Users\\careu\\PycharmProjects\\CarEU"
@@ -25,6 +26,7 @@ driver_requests = 0
 def get_proxy_creds(filename="proxy.txt"):
     if not filename:
         return None
+
     result = {'host': '', 'port': '', 'login': '', 'password': ''}
     proxy_path = os.path.join(BASE_DIR, 'mobile_scraper', filename)
     if os.path.exists(proxy_path):
@@ -65,77 +67,97 @@ manifest_json = """
 """
 
 
-# возвращает driver
-def create_driver(proxy_filename=None):
-    chrome_options = Options()
+# # возвращает driver
+# def create_driver(proxy_filename=None):
+#     chrome_options = Options()
+#
+#     try:
+#         proxy_data = get_proxy_creds(proxy_filename)
+#     except Exception as _ex:
+#         print(f'[SET PROXY] Не удалось получить параметры прокси. Ошибка ({_ex})')
+#         proxy_data = False
+#
+#     if proxy_data:
+#         proxy_host = proxy_data.get('host')
+#         proxy_port = proxy_data.get('port')
+#         proxy_username = proxy_data.get('login')
+#         proxy_password = proxy_data.get('password')
+#
+#         background_js = """
+#                    var config = {
+#                            mode: "fixed_servers",
+#                            rules: {
+#                            singleProxy: {
+#                                scheme: "http",
+#                                host: "%s",
+#                                port: parseInt(%s)
+#                            },
+#                            bypassList: ["localhost"]
+#                            }
+#                        };
+#
+#                    chrome.proxy.settings.set({value: config, scope: "regular"}, function() {});
+#
+#                    function callbackFn(details) {
+#                        return {
+#                            authCredentials: {
+#                                username: "%s",
+#                                password: "%s"
+#                            }
+#                        };
+#                    }
+#
+#                    chrome.webRequest.onAuthRequired.addListener(
+#                                callbackFn,
+#                                {urls: ["<all_urls>"]},
+#                                ['blocking']
+#                    );
+#                    """ % (proxy_host, proxy_port, proxy_username, proxy_password)
+#         pluginfile = os.path.join(BASE_DIR, 'proxy_auth_plugin.zip')
+#         with zipfile.ZipFile(pluginfile, 'w') as zp:
+#             zp.writestr("manifest.json", manifest_json)
+#             zp.writestr("background.js", background_js)
+#         chrome_options.add_extension(pluginfile)
+#
+#     # prefs = {"profile.managed_default_content_settings.images": 2}
+#     # chrome_options.add_experimental_option("prefs", prefs)
+#     chrome_options.add_argument("user-agent=Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:84.0) Gecko/20100101 "
+#                                 "Firefox/84.0")
+#     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+#
+#     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+#
+#     # print('[DRIVER INFO] Driver created successfully with images disabled.\n')
+#     return driver
+#     # print('[DRIVER INFO] Driver created successfully.\n')
+#     # return webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+#
+#
+# # закрывает все окна и завершает сеанс driver
+# def kill_driver(driver):
+#     driver.close()
+#     driver.quit()
+#     print('[DRIVER INFO] Driver was closed successfully.\n')
 
-    try:
-        proxy_data = get_proxy_creds(proxy_filename)
-    except Exception as _ex:
-        print(f'[SET PROXY] Не удалось получить параметры прокси. Ошибка ({_ex})')
-        proxy_data = False
 
-    if proxy_data:
-        proxy_host = proxy_data.get('host')
-        proxy_port = proxy_data.get('port')
-        proxy_username = proxy_data.get('login')
-        proxy_password = proxy_data.get('password')
+# UNDETECTED DRIVER VER
+def create_driver(proxy_filename="proxy.txt"):
+    proxy_data = get_proxy_creds(proxy_filename)
+    host = proxy_data.get('host', '')
+    port = proxy_data.get('port', '')
+    login = proxy_data.get('login', '')
+    password = proxy_data.get('password', '')
 
-        background_js = """
-                   var config = {
-                           mode: "fixed_servers",
-                           rules: {
-                           singleProxy: {
-                               scheme: "http",
-                               host: "%s",
-                               port: parseInt(%s)
-                           },
-                           bypassList: ["localhost"]
-                           }
-                       };
-
-                   chrome.proxy.settings.set({value: config, scope: "regular"}, function() {});
-
-                   function callbackFn(details) {
-                       return {
-                           authCredentials: {
-                               username: "%s",
-                               password: "%s"
-                           }
-                       };
-                   }
-
-                   chrome.webRequest.onAuthRequired.addListener(
-                               callbackFn,
-                               {urls: ["<all_urls>"]},
-                               ['blocking']
-                   );
-                   """ % (proxy_host, proxy_port, proxy_username, proxy_password)
-        pluginfile = os.path.join(BASE_DIR, 'proxy_auth_plugin.zip')
-        with zipfile.ZipFile(pluginfile, 'w') as zp:
-            zp.writestr("manifest.json", manifest_json)
-            zp.writestr("background.js", background_js)
-        chrome_options.add_extension(pluginfile)
-
-    # prefs = {"profile.managed_default_content_settings.images": 2}
-    # chrome_options.add_experimental_option("prefs", prefs)
-    chrome_options.add_argument("user-agent=Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:84.0) Gecko/20100101 "
-                                "Firefox/84.0")
-    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-
-    # print('[DRIVER INFO] Driver created successfully with images disabled.\n')
-    return driver
-    # print('[DRIVER INFO] Driver created successfully.\n')
-    # return webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+    options = undetected_chromedriver.ChromeOptions()
+    options.add_argument(f'--proxy-server=http://{login}:{password}@{host}:{port}')
+    return undetected_chromedriver.Chrome(options=options)
 
 
-# закрывает все окна и завершает сеанс driver
 def kill_driver(driver):
-    driver.close()
-    driver.quit()
-    print('[DRIVER INFO] Driver was closed successfully.\n')
+    try:
+        driver.quit()
+    except Exception:
+        pass
 
 
 def reload_driver_proxy(driver):
@@ -159,8 +181,8 @@ def get_htmlsoup(driver):
         # обработка случая, при котором доступ к сайту заблокирован
         if "Zugriff verweigert / Access denied" in driver.page_source:
             notification = "Error! Access to mobile denied."
-            send_notification(f"[CAREU] Во время сессии возникла ошибка ({str(datetime.now())[:-7]}).\n"
-                              f"Информация об ошибке: {notification}")
+            # send_notification(f"[CAREU] Во время сессии возникла ошибка ({str(datetime.now())[:-7]}).\n"
+            #                   f"Информация об ошибке: {notification}")
             raise SystemExit(f"[GET HTML] {notification}")
 
         soup = BeautifulSoup(driver.page_source, 'html.parser')
